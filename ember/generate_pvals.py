@@ -4,8 +4,8 @@ import os
 import scanpy as sc
 from statsmodels.stats.multitest import multipletests
 from joblib import Parallel, delayed, parallel_backend
-from generate_entropy_metrics import generate_entropy_metrics
-from sample_individuals import generate_balanced_sets
+from .generate_entropy_metrics import generate_entropy_metrics
+from .sample_individuals import generate_balanced_sets
 
 def generate_pvals(
     adata = None,
