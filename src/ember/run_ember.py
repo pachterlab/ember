@@ -8,7 +8,7 @@ import pandas as pd
 import scanpy as sc
 from tempfile import mkdtemp
 from joblib import Parallel, delayed, parallel_backend
-from .generate_entropy_metrics import generate_entropy_metrics
+from .generate_entropy_metrics import generate_entropy_metrics_optimized
 from .generate_pvals import generate_pvals
 from .sample_individuals import generate_balanced_sets, aitchison_mean_and_std
 
@@ -196,7 +196,7 @@ def run_ember(
                 # Only load small subsets to memory to maximize speed.
                 subset_ids_index = adata.obs[adata.obs[individual_var].isin(sets[i])].index
                 subset = adata[subset_ids_index, :].to_memory()
-                temp_psi, temp_psi_block, temp_zeta = generate_entropy_metrics(subset, partition_label)
+                temp_psi, temp_psi_block, temp_zeta = generate_entropy_metrics_optimized(subset, partition_label)
 
                 # Save entropy metrics
                 entropy_df = pd.DataFrame({

@@ -173,3 +173,115 @@ def generate_entropy_metrics(adata, partition_label):
 
     return Psi, Psi_block_df, Zeta
 
+
+def generate_entropy_metrics_optimized(adata, partition_label):
+    """
+    Memory efficient version!!
+    
+    Generate entropy metrics Psi, Psi_blocks (dataframe) and Zeta.
+    
+    Entropy metrics generated:
+        - Psi : Fraction of infromation explained by partition of choice
+        - Psi_block : Specificity of infromation to a block
+        - Zeta : Speicifcty to a partition/ distance of Psi_blocks distribution from uniform
+        
+    This version minimizes memory usage by avoiding large intermediate sparse matrices
+    and directly integrates the logic from the safe helper functions.
+    
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data object with `.obs` containing metadata.
+    partition_label : str
+        Column in `.obs` to partition by when calculating entropy metrics.
+ 
+    
+    Returns
+    -------
+    Psi : np.Array
+        A list of Psi scores (between 0 and 1) corresponding to the selected partition for all genes in `.var`.
+    Psi_block_df : pd.Dataframe
+        A dataframe of Psi_block scores (between 0 and 1) corresponding to the selected partition for all genes in `.var`. 
+        Scores are caluclated for all blocks, each column of the dataframe corresponds to one block. 
+    Zeta : np.Array
+        A list of Zeta scores (between 0 and 1) corresponding to the selected partition for all genes in `.var`.
+    
+    """
+    counts = adata.X
+    if not sparse.issparse(counts):
+        counts = csr_matrix(counts)
+
+    total_counts_per_gene = np.asarray(counts.sum(axis=0)).ravel()
+
+    if 'E_T' not in adata.var.columns:
+        # Create a copy to modify its .data attribute directly
+        p_i = counts.copy().astype(np.float64)
+        
+        # Apply the logic from safe_divide_sparse
+        p_i.data /= np.take(total_counts_per_gene, p_i.indices)
+        
+        # Apply the logic from safe_log2_sparse
+        with np.errstate(divide='ignore'):
+            logged_data = np.log2(p_i.data)
+        logged_data[~np.isfinite(logged_data)] = 0
+        p_i.data *= logged_data
+        
+        E_T = -np.asarray(p_i.sum(axis=0)).ravel()
+        E_T[np.isclose(total_counts_per_gene, -1)] = 0 
+        adata.var['E_T'] = E_T
+    else:
+        E_T = adata.var['E_T'].values
+
+    blocks = adata.obs[partition_label].unique()
+    n_genes = adata.shape[1]
+    
+    E_W = np.zeros(n_genes)
+    Psi_block_num = np.zeros((n_genes, len(blocks)))
+
+    for idx, block in enumerate(blocks):
+        mask = adata.obs[partition_label] == block
+        block_counts = counts[mask, :]
+        block_sum = np.asarray(block_counts.sum(axis=0)).ravel()
+
+        if np.all(np.isclose(block_sum, 0)):
+            continue
+
+        q_j = block_counts.copy().astype(np.float64)
+        q_j.data /= np.take(block_sum, q_j.indices)
+        
+        with np.errstate(divide='ignore'):
+            logged_data = np.log2(q_j.data)
+        logged_data[~np.isfinite(logged_data)] = 0
+        q_j.data *= logged_data
+        
+        entropy = -np.asarray(q_j.sum(axis=0)).ravel()
+        entropy[np.isclose(block_sum, 0)] = 0
+        
+        p_c_j = np.divide(block_sum, total_counts_per_gene, 
+                          out=np.zeros_like(block_sum, dtype=float), 
+                          where=total_counts_per_gene > 0)
+
+        weighted_entropy = entropy * p_c_j
+        E_W += weighted_entropy
+        Psi_block_num[:, idx] = weighted_entropy
+
+    with np.errstate(invalid='ignore', divide='ignore'):
+        Psi = np.divide(E_W, E_T, out=np.zeros_like(E_T, dtype=float), where=E_T > 0)
+
+    with np.errstate(invalid='ignore', divide='ignore'):
+        E_W_expanded = E_W[:, np.newaxis]
+        Psi_block = np.divide(Psi_block_num, E_W_expanded, 
+                              out=np.zeros_like(Psi_block_num, dtype=float), 
+                              where=E_W_expanded != 0)
+
+    Psi_block_df = pd.DataFrame(Psi_block, index=adata.var.index, columns=blocks)
+    
+    with np.errstate(divide='ignore'):
+        temp_psi_block = Psi_block_df.where(Psi_block_df > 0)
+        log_psi_block = np.log2(temp_psi_block)
+    
+    block_entropy = -np.nansum(Psi_block_df * log_psi_block, axis=1)
+    
+    Zeta = 1 - (block_entropy / np.log2(len(blocks)))
+
+    return Psi, Psi_block_df, Zeta
