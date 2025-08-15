@@ -27,6 +27,6 @@ dependencies = [
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["ember"]            # tell hatch where your package lives (src layout)
+packages = ["src/ember"]            # tell hatch where your package lives (src layout)
 
 
