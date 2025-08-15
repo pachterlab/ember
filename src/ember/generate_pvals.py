@@ -199,6 +199,9 @@ def generate_pvals(
             psi_block = None 
         
         Zeta = pd.Series(Zeta, index=Psi_block_df.index)
+        del(shuffled_subset)
+        gc.collect()
+        
         return Psi_series, psi_block, Zeta
 
     # Run paralellized permutaations if compute power permits. Default set to 1 unless changed in n_cpus. 

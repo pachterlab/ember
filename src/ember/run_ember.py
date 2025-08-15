@@ -1,9 +1,10 @@
 import os
+import gc
 import glob
 import shutil
 import warnings
-import pandas as pd
 import numpy as np
+import pandas as pd
 import scanpy as sc
 from tempfile import mkdtemp
 from joblib import Parallel, delayed, parallel_backend
@@ -180,6 +181,8 @@ def run_ember(
                     f"Zeta_{partition_label}": temp_zeta
                 }, index=subset.var.index)
                 entropy_df.to_csv(os.path.join(draw_dir, f"entropy_metrics_{partition_label}.csv"))
+                del(subset)
+                gc.collect()
 
                 # Save Psi_block
                 temp_psi_block.to_csv(os.path.join(draw_dir, f"Psi_block_{partition_label}.csv"))
