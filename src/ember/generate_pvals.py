@@ -1,11 +1,12 @@
 import pandas as pd
 import numpy as np
 import os
+import gc
 import scanpy as sc
 from statsmodels.stats.multitest import multipletests
 from joblib import Parallel, delayed, parallel_backend
-from .generate_entropy_metrics import generate_entropy_metrics
-from .sample_individuals import generate_balanced_sets
+from generate_entropy_metrics import generate_entropy_metrics
+from sample_individuals import generate_balanced_sets
 
 def generate_pvals(
     adata = None,
@@ -106,22 +107,26 @@ def generate_pvals(
         
     """
     # Required argument validation 
-    if adata is None and adata_dir is None:
-        raise ValueError(
-            "You must provide either `adata` (AnnData object) or `adata_dir` (path to .h5ad file)."
-        )
+    #Validate AnnData
 
-    if adata is None:
-        adata_dir = os.path.expanduser(adata_dir)
-        adata = sc.read_h5ad(adata_dir)
-        print('\nLoaded AnnData from file into memory')
-    else:
+    # 1. Handle the case where the user provides an in-memory object
+    if adata is not None:
         if not isinstance(adata, sc.AnnData):
-            raise TypeError("`adata` must be an AnnData object.")
-        print('\nUsing provided AnnData object')
+            raise TypeError("The provided `adata` must be an AnnData object.")
+        print('Using the provided in-memory AnnData object. Please use `adata_dir` argument for backed mode.')
+
+    # 2. Handle the case where the user provides a file path
+    elif adata_dir is not None:
+        adata_path = os.path.expanduser(adata_dir)
+        if not os.path.exists(adata_path):
+            raise FileNotFoundError(f"The file specified by `adata_dir` was not found at: {adata_path}")
         
-    if adata is not None and not isinstance(adata, sc.AnnData):
-        raise TypeError("`adata` must be an AnnData object.")
+        print(f'Loading AnnData object from {adata_path} in backed mode.')
+        adata = sc.read_h5ad(adata_dir, backed = 'r')
+
+    # 3. Handle the case where no input is provided
+    else:
+        raise ValueError("You must provide either an `adata` object or an `adata_dir` path.")
 
      # Validate partition_label
     if partition_label is None:
@@ -160,7 +165,8 @@ def generate_pvals(
                                           index_col = 0)
             Psi_real = all_entropy_metrics[f"Psi_unsampled_{partition_label}"]
             Zeta_real = all_entropy_metrics[f"Zeta_unsampled_{partition_label}"]
-            Psi_block_df_real = pd.read_csv(os.path.join(entropy_metrics_dir, 
+            unsampled_Psi_block_dir = os.path.join(entropy_metrics_dir, "unsampled_Psi_block_df")
+            Psi_block_df_real = pd.read_csv(os.path.join(unsampled_Psi_block_dir, 
                                                        f"Psi_block_unsampled_{partition_label}.csv"), 
                                           index_col = 0)
             
@@ -181,16 +187,30 @@ def generate_pvals(
     # Generate 1000 subsets of individuals to caluclate p-values
     sets, usage = generate_balanced_sets(adata, individual_var, sex_var, balance_by_var,num_draws = n_iterations)
     
+    #Overwrite adata object from memory if using adata_dir to activate backed mode
+    if adata_dir is not None:
+        del(adata)
+        gc.collect()
+        adata = None
+    
     # Function to scramble partition labels to calculate p-values. 
     #Outputs caluclated Psi, Psi_block and Zeta value for each iteration i. 
     
-    def run_permutation(i):
+    def run_permutation(i,  
+                         partition_label, 
+                         individual_var, 
+                         sets, 
+                         adata = None, 
+                         adata_dir = None):
         
-        shuffled_subset = adata[adata.obs[individual_var].isin(sets[i])].copy()
-        shuffled_subset.to_memory()
-        original_labels = shuffled_subset.obs[partition_label].copy()
-        shuffled_subset.obs[partition_label] = np.random.permutation(original_labels.values)
-        Psi, Psi_block_df, Zeta = generate_entropy_metrics(shuffled_subset, partition_label)
+        if adata_dir is not None:
+            adata = sc.read_h5ad(adata_dir, backed = 'r')
+        
+        subset_ids_index = adata.obs[adata.obs[individual_var].isin(sets[i])].index
+        subset = adata[subset_ids_index, :].to_memory()
+        original_labels = subset.obs[partition_label].copy()
+        subset.obs[partition_label] = np.random.permutation(original_labels.values)
+        Psi, Psi_block_df, Zeta = generate_entropy_metrics(subset, partition_label)
         Psi_series = pd.Series(Psi, index=Psi_block_df.index)
         
         if block_label is not None:
@@ -199,7 +219,7 @@ def generate_pvals(
             psi_block = None 
         
         Zeta = pd.Series(Zeta, index=Psi_block_df.index)
-        del(shuffled_subset)
+        del(subset)
         gc.collect()
         
         return Psi_series, psi_block, Zeta
@@ -207,9 +227,15 @@ def generate_pvals(
     # Run paralellized permutaations if compute power permits. Default set to 1 unless changed in n_cpus. 
     with parallel_backend('loky'):
         results = Parallel(n_jobs=n_cpus, verbose=10)(
-            delayed(run_permutation)(i) for i in range(n_iterations)
+            delayed(run_permutation)(
+                i, 
+                partition_label,
+                individual_var,
+                sets,
+                adata, 
+                adata_dir
+            ) for i in range(n_iterations)
         )
-
     Psi_df = pd.DataFrame({f"Psi_{i}": r[0] for i, r in enumerate(results)})
     Zeta_df = pd.DataFrame({f"Zeta_{i}": r[2] for i, r in enumerate(results)})
 

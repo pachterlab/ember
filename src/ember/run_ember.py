@@ -8,9 +8,9 @@ import pandas as pd
 import scanpy as sc
 from tempfile import mkdtemp
 from joblib import Parallel, delayed, parallel_backend
-from .generate_entropy_metrics import generate_entropy_metrics
-from .generate_pvals import generate_pvals
-from .sample_individuals import generate_balanced_sets, aitchison_mean_and_std
+from generate_entropy_metrics import generate_entropy_metrics
+from generate_pvals import generate_pvals
+from sample_individuals import generate_balanced_sets, aitchison_mean_and_std
 
 
 def run_ember(
@@ -100,24 +100,29 @@ def run_ember(
     """
 
         
-    # Required argument validation 
-    if adata is None and adata_dir is None:
-        raise ValueError(
-            "You must provide either `adata` (AnnData object) or `adata_dir` (path to .h5ad file)."
-        )
 
-    if adata is None:
-        adata_dir = os.path.expanduser(adata_dir)
-        adata = sc.read_h5ad(adata_dir)
-        print('\nLoaded AnnData from file into memory')
-    else:
+    #Validate AnnData
+
+    # 1. Handle the case where the user provides an in-memory object
+    if adata is not None:
         if not isinstance(adata, sc.AnnData):
-            raise TypeError("`adata` must be an AnnData object.")
-        print('\nUsing provided AnnData object')
-        
-    if adata is not None and not isinstance(adata, sc.AnnData):
-        raise TypeError("`adata` must be an AnnData object.")
+            raise TypeError("The provided `adata` must be an AnnData object.")
+        print('Using the provided in-memory AnnData object. Please use `adata_dir` argument for backed mode.')
 
+    # 2. Handle the case where the user provides a file path
+    elif adata_dir is not None:
+        adata_path = os.path.expanduser(adata_dir)
+        if not os.path.exists(adata_path):
+            raise FileNotFoundError(f"The file specified by `adata_dir` was not found at: {adata_path}")
+        
+        print(f'Loading AnnData object from {adata_path} in backed mode.')
+        adata = sc.read_h5ad(adata_dir, backed = 'r')
+
+    # 3. Handle the case where no input is provided
+    else:
+        raise ValueError("You must provide either an `adata` object or an `adata_dir` path.")
+
+    
      # Validate partition_label
     if partition_label is None:
         raise ValueError("`partition_label` must be provided.")
@@ -127,9 +132,10 @@ def run_ember(
             f"partition_label '{partition_label}' not found in adata.obs columns. "
             f"Available columns: {list(adata.obs.columns)}"
         )
-
+    # Validate save_dir
     if save_dir is None:
         raise ValueError("`save_dir` must be provided.")
+    
     
    # Validate required params if sampling or pvals true
     if sampling or partition_pvals or block_pvals:
@@ -162,17 +168,34 @@ def run_ember(
         # Temporary directory
         temp_dir = mkdtemp(prefix="ember_balanced_")
         print(f"\nSaving intermediate results to temp dir: {temp_dir}")
+        
+        #Overwrite adata object from memory if using adata_dir to activate backed mode
+        if adata_dir is not None:
+            del(adata)
+            gc.collect()
+            adata = None
+            
         try:
             
 
-            def run_draw(i):
+            def run_draw(i,  
+                         partition_label, 
+                         individual_var, 
+                         sets, 
+                         temp_dir, 
+                         adata = None, 
+                         adata_dir = None):
+                
                 draw_code = f"BALANCED_{i:02d}"
                 draw_dir = os.path.join(temp_dir, draw_code)
                 os.makedirs(draw_dir, exist_ok=True)
+                
+                if adata_dir is not None:
+                    adata = sc.read_h5ad(adata_dir, backed = 'r')
 
                 # Only load small subsets to memory to maximize speed.
                 subset_ids_index = adata.obs[adata.obs[individual_var].isin(sets[i])].index
-                subset = adata[subset_ids_index, :].copy()
+                subset = adata[subset_ids_index, :].to_memory()
                 temp_psi, temp_psi_block, temp_zeta = generate_entropy_metrics(subset, partition_label)
 
                 # Save entropy metrics
@@ -189,10 +212,18 @@ def run_ember(
             
             print(f'\nGenerating entropy metrics for {num_draws} samples. Using {n_cpus} CPUs')
             
-            # Run in parallel
+            # Run paralellized permutaations if compute power permits. Default set to 1 unless changed in n_cpus. 
             with parallel_backend('loky'):
                 results = Parallel(n_jobs=n_cpus, verbose=10)(
-                    delayed(run_draw)(i) for i in range(num_draws)
+                    delayed(run_draw)(
+                        i, 
+                        partition_label,
+                        individual_var,
+                        sets,
+                        temp_dir, 
+                        adata, 
+                        adata_dir
+                    ) for i in range(num_draws)
                 )
 
 
@@ -322,7 +353,10 @@ def run_ember(
         entropy_df.to_csv(os.path.join(save_dir, f"entropy_metrics_unsampled_{partition_label}.csv"))
 
         # Save Psi_block
-        temp_psi_block.to_csv(os.path.join(save_dir, f"Psi_block_unsampled_{partition_label}.csv"))
+        unsampled_Psi_block_dir = os.path.join(save_dir, "unsampled_Psi_block_df")
+        os.makedirs(unsampled_Psi_block_dir, exist_ok=True)
+        temp_psi_block.to_csv(os.path.join(unsampled_Psi_block_dir, 
+                                           f"Psi_block_unsampled_{partition_label}.csv"))
 
         print(f'\nSaved all unsampled entropy metrics to {os.path.join(save_dir, f"entropy_metrics_unsampled_{partition_label}.csv")}')
         
