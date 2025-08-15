@@ -8,9 +8,9 @@ import pandas as pd
 import scanpy as sc
 from tempfile import mkdtemp
 from joblib import Parallel, delayed, parallel_backend
-from generate_entropy_metrics import generate_entropy_metrics
-from generate_pvals import generate_pvals
-from sample_individuals import generate_balanced_sets, aitchison_mean_and_std
+from .generate_entropy_metrics import generate_entropy_metrics
+from .generate_pvals import generate_pvals
+from .sample_individuals import generate_balanced_sets, aitchison_mean_and_std
 
 
 def run_ember(
