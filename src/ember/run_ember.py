@@ -279,6 +279,9 @@ def run_ember(
                                        n_cpus=n_cpus)
                 out_path = os.path.join(save_dir, f"pvals_combined_entropy_metrics_{partition_label}.csv")
                 
+                pvals.to_csv(out_path)
+                print(f'\nSaved all entropy metrics along with pvalues to {out_path}')
+                
 
             # Run when block_pvals is True whether or not partition_pvals is  
             elif block_pvals:
@@ -295,8 +298,8 @@ def run_ember(
                                        n_cpus=n_cpus)
                 out_path = os.path.join(save_dir, f"pvals_combined_entropy_metrics_{partition_label}_{block_label}.csv")
                 
-            pvals.to_csv(out_path)
-            print(f'\nSaved all entropy metrics along with pvalues to {out_path}')
+                pvals.to_csv(out_path)
+                print(f'\nSaved all entropy metrics along with pvalues to {out_path}')
 
             
         finally:
@@ -340,6 +343,8 @@ def run_ember(
                                    n_iterations=n_pval_iterations, 
                                    n_cpus=n_cpus)
             out_path = os.path.join(save_dir, f"pvals_entropy_metrics_unsampled_{partition_label}_{block_label}.csv")
+            pvals.to_csv(out_path)
+            print(f'\nSaved all unsampled entropy metrics with pvalues to {out_path}')
          
          # Run when block_pvals = True whether or not partition_pvals is   
         elif block_pvals:
@@ -355,8 +360,9 @@ def run_ember(
                                    n_iterations=n_pval_iterations, 
                                    n_cpus=n_cpus)
             out_path = (os.path.join(save_dir, f"pvals_entropy_metrics_unsampled_{partition_label}_{block_label}.csv"))
+            pvals.to_csv(out_path)
+            print(f'\nSaved all unsampled entropy metrics with pvalues to {out_path}')
 
-        pvals.to_csv(out_path)
-        print(f'\nSaved all unsampled entropy metrics with pvalues to {out_path}')
+        
     print('\nember run complete')
             
