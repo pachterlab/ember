@@ -5,7 +5,7 @@ import gc
 import scanpy as sc
 from statsmodels.stats.multitest import multipletests
 from joblib import Parallel, delayed, parallel_backend
-from .generate_entropy_metrics import generate_entropy_metrics_optimized
+from .generate_entropy_metrics import generate_entropy_metrics
 from .sample_individuals import generate_balanced_sets
 
 def generate_pvals(
@@ -210,7 +210,7 @@ def generate_pvals(
         subset = adata[subset_ids_index, :].to_memory()
         original_labels = subset.obs[partition_label].copy()
         subset.obs[partition_label] = np.random.permutation(original_labels.values)
-        Psi, Psi_block_df, Zeta = generate_entropy_metrics_optimized(subset, partition_label)
+        Psi, Psi_block_df, Zeta = generate_entropy_metrics(subset, partition_label)
         Psi_series = pd.Series(Psi, index=Psi_block_df.index)
         
         if block_label is not None:
