@@ -6,11 +6,11 @@ import scanpy as sc
 from statsmodels.stats.multitest import multipletests
 from joblib import Parallel, delayed, parallel_backend
 from .generate_entropy_metrics import generate_entropy_metrics
-from .sample_individuals import generate_balanced_sets
+from .sample_replicates import generate_balanced_draws
 
 def generate_pvals(
     adata = None,
-    adata_dir = None,
+    h5ad_dir = None,
     partition_label = None,
     entropy_metrics_dir = None,
     is_sampled = True,
@@ -18,9 +18,10 @@ def generate_pvals(
     Psi_real = None,
     Psi_block_df_real = None,
     Zeta_real = None,
-    individual_var = None, 
-    sex_var = None, 
-    balance_by_var = None,
+    sample_id_col = None, 
+    category_col = None, 
+    condition_col = None,
+    seed = 42,
     block_label=None,
     n_iterations=1000,
     n_cpus=1
@@ -36,14 +37,14 @@ def generate_pvals(
 
     Parameters
     ----------
-    adata_dir : str, optional
+    adata : AnnData, optional
+        An AnnData object already loaded in memory.
+        Required if `h5ad_dir` is not provided.
+        
+    h5ad_dir : str, optional
         Path to the AnnData `.h5ad` file to process.
         Required if `adata` is not provided.
 
-    adata : AnnData, optional
-        An AnnData object already loaded in memory.
-        Required if `adata_dir` is not provided.
-        
     partition_label : str
         Column in `.obs` used to partition cells for entropy calculations 
         (e.g., "celltype"). Required to run process.
@@ -71,14 +72,23 @@ def generate_pvals(
     Zeta_real : pd.Series
         Observed Zeta values for each gene.
         
-    individual_var : str
-        Column in `.obs` that uniquely identifies individuals (e.g., mouse_id, sample_id).
+    sample_id_col : str
+        The column in `.obs` with unique identifiers for each sample or replicate
+        (e.g., 'sample_id', 'mouse_id').
         
-    sex_var : str
-        Column in `.obs` that uniquely identifies sex (e.g., Sex, sex).
+    category_col : str
+        The column in `.obs` defining the primary groups to balance within
+        (e.g., 'disease_status', 'mouse_strain').
         
-    balance_by_var : str
-        Column in `.obs` to blance draws by (e.g., mouse_strain, genotype, category, disease).
+    condition_col : str
+        The column in `.obs` containing the conditions to balance across within
+        each category (e.g., 'sex', 'treatment').
+        
+    num_draws : int, optional
+        The number of balanced subsets to generate, by default 100.
+        
+    seed : int, optional
+        The random seed for reproducible draws, by default 42.
         
     block_label : str
         Block in partition that the user wishes to calucate p-values for. 
@@ -113,20 +123,20 @@ def generate_pvals(
     if adata is not None:
         if not isinstance(adata, sc.AnnData):
             raise TypeError("The provided `adata` must be an AnnData object.")
-        print('Using the provided in-memory AnnData object. Please use `adata_dir` argument for backed mode.')
+        print('Using the provided in-memory AnnData object. Please use `h5ad_dir` argument for backed mode.')
 
     # 2. Handle the case where the user provides a file path
-    elif adata_dir is not None:
-        adata_path = os.path.expanduser(adata_dir)
+    elif h5ad_dir is not None:
+        adata_path = os.path.expanduser(h5ad_dir)
         if not os.path.exists(adata_path):
-            raise FileNotFoundError(f"The file specified by `adata_dir` was not found at: {adata_path}")
+            raise FileNotFoundError(f"The file specified by `h5ad_dir` was not found at: {adata_path}")
         
         print(f'Loading AnnData object from {adata_path} in backed mode.')
-        adata = sc.read_h5ad(adata_dir, backed = 'r')
+        adata = sc.read_h5ad(h5ad_dir, backed = 'r')
 
     # 3. Handle the case where no input is provided
     else:
-        raise ValueError("You must provide either an `adata` object or an `adata_dir` path.")
+        raise ValueError("You must provide either an `adata` object or an `h5ad_dir` path.")
 
      # Validate partition_label
     if partition_label is None:
@@ -184,11 +194,11 @@ def generate_pvals(
     Psi_block_df_real = Psi_block_df_real[mask]
     Zeta_real = Zeta_real[mask]
     
-    # Generate 1000 subsets of individuals to caluclate p-values
-    sets, usage = generate_balanced_sets(adata, individual_var, sex_var, balance_by_var,num_draws = n_iterations)
+    # Generate 1000 subsets of replicates to caluclate p-values
+    sets, usage = generate_balanced_draws(adata, sample_id_col, category_col, condition_col,num_draws = n_iterations, seed = seed)
     
-    #Overwrite adata object from memory if using adata_dir to activate backed mode
-    if adata_dir is not None:
+    #Overwrite adata object from memory if using h5ad_dir to activate backed mode
+    if h5ad_dir is not None:
         del(adata)
         gc.collect()
         adata = None
@@ -198,15 +208,15 @@ def generate_pvals(
     
     def run_permutation(i,  
                          partition_label, 
-                         individual_var, 
+                         sample_id_col, 
                          sets, 
                          adata = None, 
-                         adata_dir = None):
+                         h5ad_dir = None):
         
-        if adata_dir is not None:
-            adata = sc.read_h5ad(adata_dir, backed = 'r')
+        if h5ad_dir is not None:
+            adata = sc.read_h5ad(h5ad_dir, backed = 'r')
         
-        subset_ids_index = adata.obs[adata.obs[individual_var].isin(sets[i])].index
+        subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[i])].index
         subset = adata[subset_ids_index, :].to_memory()
         original_labels = subset.obs[partition_label].copy()
         subset.obs[partition_label] = np.random.permutation(original_labels.values)
@@ -230,10 +240,10 @@ def generate_pvals(
             delayed(run_permutation)(
                 i, 
                 partition_label,
-                individual_var,
+                sample_id_col,
                 sets,
                 adata, 
-                adata_dir
+                h5ad_dir
             ) for i in range(n_iterations)
         )
     Psi_df = pd.DataFrame({f"Psi_{i}": r[0] for i, r in enumerate(results)})

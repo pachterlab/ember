@@ -10,19 +10,20 @@ from tempfile import mkdtemp
 from joblib import Parallel, delayed, parallel_backend
 from .generate_entropy_metrics import generate_entropy_metrics
 from .generate_pvals import generate_pvals
-from .sample_individuals import generate_balanced_sets, aitchison_mean_and_std
+from .sample_replicates import generate_balanced_draws, aitchison_mean_and_std
 
 
-def run_ember(
+def light_ember(
     adata = None,
-    adata_dir = None,
+    h5ad_dir = None,
     partition_label = None,
     save_dir = None,
     sampling=True,
-    individual_var=None,
-    sex_var=None,
-    balance_by_var=None,
+    sample_id_col=None,
+    category_col=None,
+    condition_col=None,
     num_draws=100,
+    seed = 42,
     partition_pvals=True,
     block_pvals=False,
     block_label=None,
@@ -33,7 +34,7 @@ def run_ember(
     Runs the ember entropy metrics and p-value generation workflow on an AnnData object.
 
     This function loads an AnnData `.h5ad` file, optionally performs balanced sampling
-    across individuals, computes entropy metrics for the specified partition,
+    across replicates, computes entropy metrics for the specified partition,
     and generates p-values for Psi and Zeta and optionally Psi_block for a block of choice.
     
     Entropy metrics generated:
@@ -43,40 +44,44 @@ def run_ember(
 
     Parameters
     ----------
-    adata_dir : str, optional
-        Path to the AnnData `.h5ad` file to process.
-        Required if `adata` is not provided.
-
     adata : AnnData, optional
         An AnnData object already loaded in memory.
-        Required if `adata_dir` is not provided.
+        Required if `h5ad_dir` is not provided.
+        
+    h5ad_dir : str, optional
+        Path to the `.h5ad` file to process.
+        Required if `adata` is not provided.
         
     partition_label : str
         Column in `.obs` used to partition cells for entropy calculations 
-        (e.g., "celltype"). Required to run process. 
+        (e.g., "celltype"). Required to run process. If performing calculation on interaction term, 
+        first create a column in `.obs` concatnating the two columns of interested with a semicolon (:).
         
     save_dir : str
         Path to directory where results will be saved. Required to run process. 
 
     sampling : bool, default=True
-        Whether to perform balanced sampling across individuals before entropy calculation.
-        If True, `individual_var`, `sex_var`, and `balance_by_var` must be provided.
+        Whether to perform balanced sampling across replicates before entropy calculation.
+        If True, `sample_id_col`, `category_col`, and `condition_col` must be provided.
 
-    individual_var : str, optional
-        Column in `.obs` containing unique individual IDs.
-        Required if `sampling=True`.
-
-    sex_var : str, optional
-        Column in `.obs` containing sex categories (e.g., "Male", "Female").
-        Required if `sampling=True`.
-
-    balance_by_var : str, optional
-        Column in `.obs` used to balance individual sampling 
-        (e.g., strain or genotype). Required if `sampling=True`.
-
-    num_draws : int, default=100
-        Number of balanced draws to perform if `sampling=True`.
-
+    sample_id_col : str
+        The column in `.obs` with unique identifiers for each sample or replicate
+        (e.g., 'sample_id', 'mouse_id').
+        
+    category_col : str
+        The column in `.obs` defining the primary groups to balance within
+        (e.g., 'disease_status', 'mouse_strain').
+        
+    condition_col : str
+        The column in `.obs` containing the conditions to balance across within
+        each category (e.g., 'sex', 'treatment').
+        
+    num_draws : int, optional
+        The number of balanced subsets to generate, by default 100.
+        
+    seed : int, optional
+        The random seed for reproducible draws, by default 42.
+        
     partition_pvals : bool, default=True
         Whether to compute permutation-based p-values for the `partition_label`.
 
@@ -84,7 +89,7 @@ def run_ember(
         Whether to compute permutation-based p-values for the `block_label`.
 
     block_label : str, optional
-        Column in `.obs` to use for block-based permutation tests.
+        One value in the `.obs` column for partition_label to use for block-based permutation tests.
         Required if `block_pvals=True`.
 
     n_pval_iterations : int, default=1000
@@ -96,6 +101,11 @@ def run_ember(
     Notes
     -----
     - Results are saved to `save_dir` as CSV files.
+    - one csv file with all entropy metrics 
+    - one csv file in a new Psi_block_df folder with psi block values for all blocks in a partition
+    - Separate file for pvals
+    - Separate files for each partition 
+    - Alternate file names depending on sampling on or off. 
     
     """
 
@@ -107,20 +117,20 @@ def run_ember(
     if adata is not None:
         if not isinstance(adata, sc.AnnData):
             raise TypeError("The provided `adata` must be an AnnData object.")
-        print('Using the provided in-memory AnnData object. Please use `adata_dir` argument for backed mode.')
+        print('Using the provided in-memory AnnData object. Please use `h5ad_dir` argument for backed mode.')
 
     # 2. Handle the case where the user provides a file path
-    elif adata_dir is not None:
-        adata_path = os.path.expanduser(adata_dir)
+    elif h5ad_dir is not None:
+        adata_path = os.path.expanduser(h5ad_dir)
         if not os.path.exists(adata_path):
-            raise FileNotFoundError(f"The file specified by `adata_dir` was not found at: {adata_path}")
+            raise FileNotFoundError(f"The file specified by `h5ad_dir` was not found at: {adata_path}")
         
         print(f'Loading AnnData object from {adata_path} in backed mode.')
-        adata = sc.read_h5ad(adata_dir, backed = 'r')
+        adata = sc.read_h5ad(h5ad_dir, backed = 'r')
 
     # 3. Handle the case where no input is provided
     else:
-        raise ValueError("You must provide either an `adata` object or an `adata_dir` path.")
+        raise ValueError("You must provide either an `adata` object or an `h5ad_dir` path.")
 
     
      # Validate partition_label
@@ -139,9 +149,9 @@ def run_ember(
     
    # Validate required params if sampling or pvals true
     if sampling or partition_pvals or block_pvals:
-        if not all([individual_var, sex_var, balance_by_var]):
+        if not all([sample_id_col, category_col, condition_col]):
             raise ValueError(
-                "If sampling or generating pvals (requires sampling), you must provide `individual_var`, `sex_var`, and `balance_by_var`."
+                "If sampling or generating pvals (requires sampling), you must provide `sample_id_col`, `category_col`, and `condition_col`."
             )
 
 
@@ -161,16 +171,16 @@ def run_ember(
     
     if sampling:
         # Generate balanced sets
-        sets, usage = generate_balanced_sets(
-            adata, individual_var, sex_var, balance_by_var, num_draws=num_draws
+        sets, usage = generate_balanced_draws(
+            adata, sample_id_col, category_col, condition_col, num_draws=num_draws, seed = seed
         )
 
         # Temporary directory
         temp_dir = mkdtemp(prefix="ember_balanced_")
         print(f"\nSaving intermediate results to temp dir: {temp_dir}")
         
-        #Overwrite adata object from memory if using adata_dir to activate backed mode
-        if adata_dir is not None:
+        #Overwrite adata object from memory if using h5ad_dir to activate backed mode
+        if h5ad_dir is not None:
             del(adata)
             gc.collect()
             adata = None
@@ -180,21 +190,21 @@ def run_ember(
 
             def run_draw(i,  
                          partition_label, 
-                         individual_var, 
+                         sample_id_col, 
                          sets, 
                          temp_dir, 
                          adata = None, 
-                         adata_dir = None):
+                         h5ad_dir = None):
                 
                 draw_code = f"BALANCED_{i:02d}"
                 draw_dir = os.path.join(temp_dir, draw_code)
                 os.makedirs(draw_dir, exist_ok=True)
                 
-                if adata_dir is not None:
-                    adata = sc.read_h5ad(adata_dir, backed = 'r')
+                if h5ad_dir is not None:
+                    adata = sc.read_h5ad(h5ad_dir, backed = 'r')
 
                 # Only load small subsets to memory to maximize speed.
-                subset_ids_index = adata.obs[adata.obs[individual_var].isin(sets[i])].index
+                subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[i])].index
                 subset = adata[subset_ids_index, :].to_memory()
                 temp_psi, temp_psi_block, temp_zeta = generate_entropy_metrics(subset, partition_label)
 
@@ -218,11 +228,11 @@ def run_ember(
                     delayed(run_draw)(
                         i, 
                         partition_label,
-                        individual_var,
+                        sample_id_col,
                         sets,
                         temp_dir, 
                         adata, 
-                        adata_dir
+                        h5ad_dir
                     ) for i in range(num_draws)
                 )
 
@@ -297,14 +307,15 @@ def run_ember(
                 print(f'\nGenerating p-values for entropy metrics.')
             # If partition_pvals == True and block_pvals == False
             if partition_pvals and not block_pvals:
-                pvals = generate_pvals(adata = adata, 
+                pvals = generate_pvals(adata = adata,
+                                       h5ad_dir = h5ad_dir,
                                        partition_label = partition_label, 
                                        Psi_real = aggregate_entropy_df[f"Psi_mean_{partition_label}"], 
                                        Psi_block_df_real = mean_Psi_block, 
                                        Zeta_real = aggregate_entropy_df[f"Zeta_mean_{partition_label}"], 
-                                       individual_var = individual_var,
-                                       sex_var = sex_var, 
-                                       balance_by_var = balance_by_var, 
+                                       sample_id_col = sample_id_col,
+                                       category_col = category_col, 
+                                       condition_col = condition_col, 
                                        block_label=block_label, 
                                        n_iterations=n_pval_iterations, 
                                        n_cpus=n_cpus)
@@ -317,13 +328,14 @@ def run_ember(
             # Run when block_pvals is True whether or not partition_pvals is  
             elif block_pvals:
                 pvals = generate_pvals(adata = adata,
+                                       h5ad_dir = h5ad_dir,
                                        partition_label = partition_label, 
                                        Psi_real = aggregate_entropy_df[f"Psi_mean_{partition_label}"], 
                                        Psi_block_df_real = mean_Psi_block, 
                                        Zeta_real = aggregate_entropy_df[f"Zeta_mean_{partition_label}"], 
-                                       individual_var = individual_var, 
-                                       sex_var = sex_var, 
-                                       balance_by_var = balance_by_var, 
+                                       sample_id_col = sample_id_col, 
+                                       category_col = category_col, 
+                                       condition_col = condition_col, 
                                        block_label=block_label, 
                                        n_iterations=n_pval_iterations, 
                                        n_cpus=n_cpus)
@@ -366,13 +378,14 @@ def run_ember(
         # If partition_pvals == True and block_pvals == False
         if partition_pvals and not block_pvals:
             pvals = generate_pvals(adata = adata,
+                                   h5ad_dir = h5ad_dir,
                                    partition_label = partition_label, 
                                    Psi_real = entropy_df[f"Psi_unsampled_{partition_label}"], 
                                    Psi_block_df_real = temp_psi_block, 
                                    Zeta_real = entropy_df[f"Zeta_unsampled_{partition_label}"], 
-                                   individual_var = individual_var, 
-                                   sex_var = sex_var, 
-                                   balance_by_var = balance_by_var, 
+                                   sample_id_col = sample_id_col, 
+                                   category_col = category_col, 
+                                   condition_col = condition_col, 
                                    block_label=block_label, 
                                    n_iterations=n_pval_iterations, 
                                    n_cpus=n_cpus)
@@ -383,13 +396,14 @@ def run_ember(
          # Run when block_pvals = True whether or not partition_pvals is   
         elif block_pvals:
             pvals = generate_pvals(adata = adata, 
+                                   h5ad_dir = h5ad_dir,
                                    partition_label = partition_label, 
                                    Psi_real = entropy_df[f"Psi_unsampled_{partition_label}"], 
                                    Psi_block_df_real = temp_psi_block, 
                                    Zeta_real = entropy_df[f"Zeta_unsampled_{partition_label}"], 
-                                   individual_var = individual_var, 
-                                   sex_var = sex_var, 
-                                   balance_by_var = balance_by_var, 
+                                   sample_id_col = sample_id_col, 
+                                   category_col = category_col, 
+                                   condition_col = condition_col, 
                                    block_label=block_label, 
                                    n_iterations=n_pval_iterations, 
                                    n_cpus=n_cpus)
