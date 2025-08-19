@@ -47,7 +47,7 @@ def generate_balanced_draws(adata, sample_id_col, category_col, condition_col, n
     
     # Group samples by (category, condition)
     grouped = (
-        df.groupby([category_col, condition_col])[sample_id_col]
+        df.groupby([category_col, condition_col], observed=True)[sample_id_col]
         .unique()
         .apply(list)
         .to_dict()
