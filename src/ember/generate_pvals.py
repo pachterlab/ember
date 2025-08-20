@@ -74,15 +74,15 @@ def generate_pvals(
         
     sample_id_col : str
         The column in `.obs` with unique identifiers for each sample or replicate
-        (e.g., 'sample_id', 'mouse_id').
+        (e.g., 'sample_id', 'mouse_id'). Required to run process.
         
     category_col : str
         The column in `.obs` defining the primary groups to balance within
-        (e.g., 'disease_status', 'mouse_strain').
+        (e.g., 'disease_status', 'mouse_strain'). Required to run process.
         
     condition_col : str
         The column in `.obs` containing the conditions to balance across within
-        each category (e.g., 'sex', 'treatment').
+        each category (e.g., 'sex', 'treatment'). Required to run process.
         
     num_draws : int, optional
         The number of balanced subsets to generate, by default 100.
@@ -187,6 +187,9 @@ def generate_pvals(
             "You must provide either `entropy_metrics_dir` (path to folder with metrics file) "
             "OR all of `Psi_real`, `Psi_block_df_real`, and `Zeta_real` individually."
         )
+    # Validate sampling inputs
+    if sample_id_col or category_col or condition_col is None:
+        raise ValueError("You must provide `sample_id_col`, `category_col`, and `condition_col` for sampling of replicates for p-values.")
 
     
     mask = Psi_real > 0
