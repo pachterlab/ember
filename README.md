@@ -42,7 +42,6 @@ light_ember(
 )
 ````
 
------
 
 ### Parameters
 
@@ -64,7 +63,6 @@ light_ember(
 | `n_pval_iterations` | int | Number of permutations for p-value calculation. | `1000` |
 | `n_cpus` | int | Number of CPU cores to use for parallel processing. | `1` |
 
------
 
 ### Output Files
 
