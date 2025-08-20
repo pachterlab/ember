@@ -7,7 +7,7 @@
 
 This is the main workflow function in `ember`. It loads in an h5ad file as an Anndata object using either in-memory mode (use `adata`) or memory-efficient mode (use`h5ad_dir`) and computes entropy metrics (&Psi;, &Zeta; and &Psi;<sub>block</sub> ) for a given partition label, optionally performs balanced sampling across experimental replicates, and generates permutation-based p-values to assess statistical significance of entropy metrics.
 
------
+Entropy metrics generated: 
 
   * **&Psi;**: Fraction of information explained by the partition of choice.
   * **&Psi;<sub>block</sub>**: Specificity of information to a block.
