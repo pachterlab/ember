@@ -114,9 +114,9 @@ generate_pvals(h5ad_dir = 'subset_dev_kidney.h5ad',
 | `Psi_real` | pd.Series | Required if `entropy_metrics_dir` not provided. A pandas Series with observed Ψ values. | `None` |
 | `Psi_block_df_real` | pd.DataFrame| Required if `entropy_metrics_dir` not provided. A pandas DataFrame with observed Ψ\<sub\>block\</sub\> values. | `None` |
 | `Zeta_real` | pd.Series | Required if `entropy_metrics_dir` not provided. A pandas Series with observed Ζ values. | `None` |
-| `sample_id_col` | str | Required if permutations should be run on balanced samples. | `None` |
-| `category_col` | str | Required if permutations should be run on balanced samples. | `None` |
-| `condition_col` | str | Required if permutations should be run on balanced samples. | `None` |
+| **`sample_id_col`** | str | Required for permutations over balanced samples. | `None` |
+| **`category_col`** | str | Required for permutations over balanced samples. | `None` |
+| **`condition_col`** | str | Required for permutations over balanced samples. | `None` |
 | `seed` | int | Random seed for reproducible permutations. | `42` |
 | `block_label` | str | Optional. A specific value from `partition_label` to calculate a Ψ\<sub\>block\</sub\> p-value for. | `None` |
 | `n_iterations` | int | Number of permutations to run. More iterations increase reliability and runtime. | `1000` |
