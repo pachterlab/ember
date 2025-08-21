@@ -49,7 +49,7 @@ def generate_alluvial_plot(
     column_weights="umi_total",
     sorting_algorithm="tsp",
     verbose=True,
-    dev_mode=True,
+    dev_mode=False,
     auto_adjust_text=True,
     match_order="None",
     axis_text_size=20,
