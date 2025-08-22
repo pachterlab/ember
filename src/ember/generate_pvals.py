@@ -189,7 +189,7 @@ def generate_pvals(
         )
     # Validate sampling inputs
     if sample_id_col is None or category_col is None or condition_col is None:
-    raise ValueError("You must provide `sample_id_col`, `category_col`, and `condition_col` for sampling of replicates for p-values.")
+        raise ValueError("You must provide `sample_id_col`, `category_col`, and `condition_col` for sampling of replicates for p-values.")
 
     
     mask = Psi_real > 0
