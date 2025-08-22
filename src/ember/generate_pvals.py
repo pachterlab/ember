@@ -188,8 +188,8 @@ def generate_pvals(
             "OR all of `Psi_real`, `Psi_block_df_real`, and `Zeta_real` individually."
         )
     # Validate sampling inputs
-    if sample_id_col or category_col or condition_col is None:
-        raise ValueError("You must provide `sample_id_col`, `category_col`, and `condition_col` for sampling of replicates for p-values.")
+    if sample_id_col is None or category_col is None or condition_col is None:
+    raise ValueError("You must provide `sample_id_col`, `category_col`, and `condition_col` for sampling of replicates for p-values.")
 
     
     mask = Psi_real > 0
