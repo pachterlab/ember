@@ -6,12 +6,66 @@ import warnings
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import anndata as ad
+import multiprocessing
 from tempfile import mkdtemp
-from joblib import Parallel, delayed, parallel_backend
-from .generate_entropy_metrics_optimized import generate_entropy_metrics_optimized
+from tqdm import tqdm
+from .generate_entropy_metrics import generate_entropy_metrics
 from .generate_pvals import generate_pvals
 from .sample_replicates import generate_balanced_draws, aitchison_mean_and_std
 
+
+def worker_wrapper(args):
+    """
+    Unpacks a tuple of arguments and calls the real worker function.
+    Needed because pool.imap only accepts functions with a single argument.
+    """
+    return run_computation_on_subset(*args)
+
+def prepare_task_args(sets, sample_id_col, partition_label, temp_dir, h5ad_dir=None):
+    """
+    Generator that decontructs each subset of indeces from an anndata object 
+    and yields a single tuple of all necessary arguments for each task.
+    """
+    adata = ad.read_h5ad(h5ad_dir, backed='r')
+    for i in range(len(sets)):
+        subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[i])].index
+        subset_in_memory = adata[subset_ids_index, :].to_memory().copy()
+
+        data_matrix = subset_in_memory.X
+        obs_df = subset_in_memory.obs
+        var_index = subset_in_memory.var.index
+
+        # Yield a single tuple containing ALL arguments for the worker
+        yield (i, data_matrix, obs_df, var_index, partition_label, temp_dir)
+
+    adata.file.close()
+    
+
+def run_computation_on_subset(i, data_matrix, obs_df, var_index, partition_label, temp_dir):
+    """
+    Worker that accepts raw data and rebuilds a clean AnnData object.
+    Runs generate_entropy_metrics on rebuild anndata.
+    """
+    subset = ad.AnnData(X=data_matrix, obs=obs_df)
+    subset.var.index = var_index
+
+    draw_code = f"BALANCED_{i:02d}"
+    draw_dir = os.path.join(temp_dir, draw_code)
+    os.makedirs(draw_dir, exist_ok=True)
+
+    temp_psi, temp_psi_block, temp_zeta = generate_entropy_metrics(subset, partition_label)
+
+    entropy_df = pd.DataFrame({
+        f"Psi_{partition_label}": temp_psi,
+        f"Zeta_{partition_label}": temp_zeta
+    }, index=subset.var.index)
+    entropy_df.to_csv(os.path.join(draw_dir, f"entropy_metrics_{partition_label}.csv"))
+    temp_psi_block.to_csv(os.path.join(draw_dir, f"Psi_block_{partition_label}.csv"))
+    del(subset, temp_psi, temp_psi_block, temp_zeta)
+    gc.collect()
+
+    return f"Task {i} completed."
 
 def light_ember(
     adata = None,
@@ -97,6 +151,8 @@ def light_ember(
 
     n_cpus : int, default=1
         Number of CPU cores to use for parallel permutation testing.
+        For this script, performance is I/O-bound and may not improve beyond 4-8 cores.'
+        
 
     Notes
     -----
@@ -126,7 +182,7 @@ def light_ember(
             raise FileNotFoundError(f"The file specified by `h5ad_dir` was not found at: {adata_path}")
         
         print(f'Loading AnnData object from {adata_path} in backed mode.')
-        adata = sc.read_h5ad(h5ad_dir, backed = 'r')
+        adata = ad.read_h5ad(h5ad_dir, backed = 'r')
 
     # 3. Handle the case where no input is provided
     else:
@@ -177,7 +233,7 @@ def light_ember(
 
         # Temporary directory
         temp_dir = mkdtemp(prefix="ember_balanced_")
-        print(f"\nSaving intermediate results to temp dir: {temp_dir}")
+        print(f'\nTemp files location: {temp_dir}.')
         
         #Overwrite adata object from memory if using h5ad_dir to activate backed mode
         if h5ad_dir is not None:
@@ -186,57 +242,24 @@ def light_ember(
             adata = None
             
         try:
+
+            # Create the generator that will produce the arguments for each task
+            task_generator = prepare_task_args(
+                sets,
+                sample_id_col,
+                partition_label,
+                temp_dir,  
+                h5ad_dir=h5ad_dir
+            )
+
+            print(f"\nComputing {num_draws} iterations in parallel with {n_cpus} workers")
+            results = []
+            # Create a pool of worker processes
+            with multiprocessing.Pool(processes=n_cpus) as pool:
+                for result in tqdm(pool.imap_unordered(worker_wrapper, task_generator), total=len(sets)):
+                    results.append(result)
             
-
-            def run_draw(i,  
-                         partition_label, 
-                         sample_id_col, 
-                         sets, 
-                         temp_dir, 
-                         adata = None, 
-                         h5ad_dir = None):
-                
-                draw_code = f"BALANCED_{i:02d}"
-                draw_dir = os.path.join(temp_dir, draw_code)
-                os.makedirs(draw_dir, exist_ok=True)
-                
-                if h5ad_dir is not None:
-                    adata = sc.read_h5ad(h5ad_dir, backed = 'r')
-
-                # Only load small subsets to memory to maximize speed.
-                subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[i])].index
-                subset = adata[subset_ids_index, :].to_memory()
-                temp_psi, temp_psi_block, temp_zeta = generate_entropy_metrics_optimized(subset, partition_label)
-
-                # Save entropy metrics
-                entropy_df = pd.DataFrame({
-                    f"Psi_{partition_label}": temp_psi, 
-                    f"Zeta_{partition_label}": temp_zeta
-                }, index=subset.var.index)
-                entropy_df.to_csv(os.path.join(draw_dir, f"entropy_metrics_{partition_label}.csv"))
-                del(subset)
-                gc.collect()
-
-                # Save Psi_block
-                temp_psi_block.to_csv(os.path.join(draw_dir, f"Psi_block_{partition_label}.csv"))
-            
-            print(f'\nGenerating entropy metrics for {num_draws} samples. Using {n_cpus} CPUs')
-            
-            # Run paralellized permutaations if compute power permits. Default set to 1 unless changed in n_cpus. 
-            with parallel_backend('loky'):
-                results = Parallel(n_jobs=n_cpus, verbose=10)(
-                    delayed(run_draw)(
-                        i, 
-                        partition_label,
-                        sample_id_col,
-                        sets,
-                        temp_dir, 
-                        adata, 
-                        h5ad_dir
-                    ) for i in range(num_draws)
-                )
-
-
+ 
             # ========== Aggregation Phase ==========
             # Prep
             save_dir = os.path.expanduser(save_dir)

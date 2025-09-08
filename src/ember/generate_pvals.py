@@ -2,11 +2,72 @@ import pandas as pd
 import numpy as np
 import os
 import gc
+import multiprocessing
+import anndata as ad
+from tqdm import tqdm 
 import scanpy as sc
 from statsmodels.stats.multitest import multipletests
-from joblib import Parallel, delayed, parallel_backend
 from .generate_entropy_metrics import generate_entropy_metrics
 from .sample_replicates import generate_balanced_draws
+
+def worker_wrapper(args):
+    """Unpacks arguments and calls the real worker function."""
+    return run_permutation_task(*args)
+
+# 3. THE PRODUCER: Prepares all data and arguments for each task
+def prepare_permutation_tasks(h5ad_dir, sets, sample_id_col, partition_label, block_label, n_iterations):
+    """
+    Generator that handles all file I/O. It prepares and yields a tuple
+    of all arguments needed for each permutation task.
+    """
+    adata = ad.read_h5ad(h5ad_dir, backed='r')
+    
+    for i in range(n_iterations):
+        # Use the provided sets to define the data for this iteration
+        # This assumes len(sets) is sufficient for n_iterations
+        current_set_index = i % len(sets)
+        subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[current_set_index])].index
+        subset_in_memory = adata[subset_ids_index, :].to_memory().copy()
+        
+        # Extract the raw, decoupled data components
+        data_matrix = subset_in_memory.X
+        obs_df = subset_in_memory.obs
+        var_index = subset_in_memory.var.index
+        original_labels = subset_in_memory.obs[partition_label].values
+
+        # Yield a single tuple containing all arguments for the worker
+        yield (i, data_matrix, obs_df, var_index, original_labels, partition_label, block_label)
+        
+    adata.file.close()
+
+def run_permutation_task(i, data_matrix, obs_df, var_index, original_labels, partition_label, block_label):
+    """
+    Lean worker function. Receives raw data, rebuilds an AnnData object,
+    runs the permutation, and calculates metrics.
+    """
+    # Rebuild a clean AnnData object
+    subset = ad.AnnData(X=data_matrix, obs=obs_df)
+    subset.var.index = var_index
+    
+    # Perform the core logic: shuffling the labels
+    subset.obs[partition_label] = np.random.permutation(original_labels)
+    
+    # Generate metrics
+    Psi, Psi_block_df, Zeta = generate_entropy_metrics(subset, partition_label)
+    
+    # Format results into Series
+    Psi_series = pd.Series(Psi, index=Psi_block_df.index)
+    Zeta_series = pd.Series(Zeta, index=Psi_block_df.index)
+    
+    psi_block_series = None
+    if block_label is not None:
+        psi_block_series = pd.Series(Psi_block_df[block_label], index=Psi_block_df.index)
+
+    del subset
+    gc.collect()
+    
+    return Psi_series, psi_block_series, Zeta_series
+
 
 def generate_pvals(
     adata = None,
@@ -209,46 +270,25 @@ def generate_pvals(
     # Function to scramble partition labels to calculate p-values. 
     #Outputs caluclated Psi, Psi_block and Zeta value for each iteration i. 
     
-    def run_permutation(i,  
-                         partition_label, 
-                         sample_id_col, 
-                         sets, 
-                         adata = None, 
-                         h5ad_dir = None):
-        
-        if h5ad_dir is not None:
-            adata = sc.read_h5ad(h5ad_dir, backed = 'r')
-        
-        subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[i])].index
-        subset = adata[subset_ids_index, :].to_memory()
-        original_labels = subset.obs[partition_label].copy()
-        subset.obs[partition_label] = np.random.permutation(original_labels.values)
-        Psi, Psi_block_df, Zeta = generate_entropy_metrics(subset, partition_label)
-        Psi_series = pd.Series(Psi, index=Psi_block_df.index)
-        
-        if block_label is not None:
-            psi_block = pd.Series(Psi_block_df[block_label], index=Psi_block_df.index)
-        else:
-            psi_block = None 
-        
-        Zeta = pd.Series(Zeta, index=Psi_block_df.index)
-        del(subset)
-        gc.collect()
-        
-        return Psi_series, psi_block, Zeta
+    # Create the generator that will produce the arguments for each task
+    task_generator = prepare_permutation_tasks(
+        h5ad_dir,
+        sets,
+        sample_id_col,
+        partition_label,
+        block_label,
+        n_iterations
+    )
 
-    # Run paralellized permutaations if compute power permits. Default set to 1 unless changed in n_cpus. 
-    with parallel_backend('loky'):
-        results = Parallel(n_jobs=n_cpus, verbose=10)(
-            delayed(run_permutation)(
-                i, 
-                partition_label,
-                sample_id_col,
-                sets,
-                adata, 
-                h5ad_dir
-            ) for i in range(n_iterations)
-        )
+    print(f"\nStarting {n_iterations} parallel permutations with {n_cpus} workers...")
+    results = []
+    # Create a pool of worker processes
+    with multiprocessing.Pool(processes=n_cpus) as pool:
+        # tqdm creates a progress bar for all your tasks
+        # imap_unordered is highly efficient
+        for result in tqdm(pool.imap_unordered(worker_wrapper, task_generator), total=n_iterations):
+            results.append(result)
+
     Psi_df = pd.DataFrame({f"Psi_{i}": r[0] for i, r in enumerate(results)})
     Zeta_df = pd.DataFrame({f"Zeta_{i}": r[2] for i, r in enumerate(results)})
 
