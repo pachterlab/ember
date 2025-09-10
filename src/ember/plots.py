@@ -319,8 +319,11 @@ def plot_sample_counts(
     Returns
     -------
     None
+    
     """
-    # 1. Load data and create a DataFrame
+    h5ad_dir = os.path.expanduser(h5ad_dir)
+    save_dir = os.path.expanduser(save_dir)
+    
     try:
         adata = ad.read_h5ad(h5ad_dir, backed = 'r')
     except IOError:
@@ -333,14 +336,15 @@ def plot_sample_counts(
         'condition': adata.obs[condition_col].astype(str)
     })
 
-    # 2. Calculate unique counts
+    # Calculate unique counts
     counts = df.groupby(['category', 'condition'])['id'].nunique().reset_index(name='count')
 
-    # 3. Create the plot
-    plt.figure(figsize=(8,8))
+    # Create the plot
+    plt.style.use('seaborn-v0_8-whitegrid')
+    plt.figure(figsize=(12, 7))
     sns.barplot(data=counts, x='category', y='count', hue='condition')
 
-    # 4. Customize the plot
+    # Customize the plot
     # Set labels and title
     plt.title(f'Number of Samples by {category_col} and {condition_col}')
     plt.xlabel(category_col)
@@ -359,12 +363,114 @@ def plot_sample_counts(
 
     plt.tight_layout()
 
-    # 5. Save and show the plot
+    # Save and show the plot
     try:
         plt.savefig(save_dir, dpi=300, bbox_inches='tight')
         print(f"Plot saved to {save_dir}")
     except IOError:
         print(f"Error: Could not save plot to {save_dir}")
+    
+    plt.tight_layout() 
+    plt.show()
+    
+    
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+
+def plot_psi_blocks(
+    gene_name,
+    partition_label,
+    psi_block_df_dir,
+    save_dir):
+    """
+    Generates and saves a bar plot of mean psi block values with error bars.
+
+    This function reads two CSV files from a specified directory: one for mean
+    psi block values and one for standard deviations. It plots the mean values
+    for a specific gene as a bar plot with corresponding standard deviation
+    error bars.
+
+    Parameters
+    ----------
+    gene_name : str
+        The name of the gene (row) to select and plot from the CSV files.
+    partition_label : str
+        The partition label used to find the correct files (e.g., 'Genotype').
+    psi_block_df_dir : str
+        Path to the directory containing the mean and std CSV files. Files must
+        be named 'mean_Psi_block_df_{partition_label}.csv' and 
+        'std_Psi_block_df_{partition_label}.csv'.
+    save_dir : str
+        Path to save the output plot image (e.g., 'plot.png').
+
+    Returns
+    -------
+    None
+    """
+    
+    psi_block_df_dir = os.path.expanduser(psi_block_df_dir)
+    save_dir = os.path.expanduser(save_dir)
+    
+    # Construct paths for the mean and standard deviation files
+    psi_mean_path = os.path.join(psi_block_df_dir, f'mean_Psi_block_df_{partition_label}.csv')
+    psi_std_path = os.path.join(psi_block_df_dir, f'std_Psi_block_df_{partition_label}.csv')
+    
+    # Load mean and std data from CSV files
+    try:
+        df_mean = pd.read_csv(psi_mean_path, index_col=0)
+        df_std = pd.read_csv(psi_std_path, index_col=0)
+    except FileNotFoundError as e:
+        print(f"Error: A required data file was not found. {e}")
+        return
+    except Exception as e:
+        print(f"An error occurred while reading the CSV files: {e}")
+        return
+
+    # Select the data for the specified gene from both dataframes
+    try:
+        gene_mean = df_mean.loc[gene_name]
+        gene_std = df_std.loc[gene_name]
+    except KeyError:
+        print(f"Error: Gene '{gene_name}' not found in the data files.")
+        return
+        
+    # Sort the data alphabetically by the block names to ensure alignment
+    gene_mean = gene_mean.sort_index()
+    gene_std = gene_std.reindex(gene_mean.index) # Ensure std is in the same order as mean
+
+    # Create the plot
+    plt.style.use('seaborn-v0_8-whitegrid')
+    plt.figure(figsize=(12, 7))
+    
+    # Use plt.bar to include error bars (yerr)
+    plt.bar(
+        x=gene_mean.index,
+        height=gene_mean.values,
+        yerr=gene_std.values,
+        color='grey',
+        capsize=4  
+    )
+
+    # Customize the plot
+    plt.title(f'Mean $\psi$ values for {gene_name} in {partition_label}', fontsize=16)
+    plt.xlabel('Block', fontsize=12)
+    plt.ylabel(r'$\psi_{block}$', fontsize=14)
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(axis='x')
+    
+    # Set the y-axis limits to be between 0 and 1
+    plt.ylim(0, 1)
+    
+    plt.tight_layout()
+
+    # Save and show the plot
+    try:
+        plt.savefig(save_dir, dpi=300, bbox_inches='tight')
+        print(f"Plot successfully saved to {save_dir}")
+    except IOError as e:
+        print(f"Error: Could not save the plot to {save_dir}. Reason: {e}")
     
     plt.show()
     
