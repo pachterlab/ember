@@ -17,14 +17,15 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy>=2.0,<=2.2",         # array math
-    "pandas>=2.0",              # dataframes
-    "scanpy>=1.9",              # single-cell analysis
-    "scipy>=1.11",              # scientific computing, sparse matrices, stats
-    "statsmodels>=0.14",        # statistical models, multipletests
-    "joblib>=1.3",              # parallel processing
-    "matplotlib>=3.7",          # plotting library
-    "adjustText>=0.8",          # avoid overlapping text labels in plots
+    "numpy>=2.0,<=2.2",        # array math
+    "pandas>=2.0",             # dataframes
+    "scanpy>=1.9",             # single-cell analysis
+    "scipy>=1.11",             # scientific computing, sparse matrices, stats
+    "statsmodels>=0.14",       # statistical models, multipletests
+    "joblib>=1.3",             # parallel processing
+    "matplotlib>=3.7",         # plotting library
+    "seaborn>=0.13",           # statistical data visualization
+    "adjustText>=0.8",         # avoid overlapping text labels in plots
 ]
 
 

@@ -3,6 +3,8 @@ import matplotlib.patches as mpatches
 from adjustText import adjust_text
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import anndata as ad
 import os
 
 def _find_top_genes(df, n_top=15, method='sum', metric_cols=None, fdr_cols=None):
@@ -285,6 +287,86 @@ def plot_block_specificity(partition_label,
     plt.savefig(out_path)
     plt.show()
     print(f'Block specificity plot saved to {out_path}')
+    
+
+def plot_sample_counts(
+    h5ad_dir,
+    save_dir,
+    sample_id_col,
+    category_col,
+    condition_col):
+    """
+    Generates and saves a bar plot showing the number of unique individuals
+    per category and condition.
+
+    This function reads an AnnData object from an .h5ad file in backed mode, 
+    calculates the number of unique individuals for each combination of a given 
+    category and condition, and visualizes these counts as a grouped bar plot.
+
+    Parameters
+    ----------
+    h5ad_dir : str
+        Path to the input AnnData (.h5ad) file.
+    save_dir : str
+        Path to save the output plot image (e.g., 'plot.png').
+    sample_id_col : str
+        The column name in adata.obs that contains unique sample IDs.
+    category_col : str
+        The column name to use for the primary categories on the x-axis.
+    condition_col : str
+        The column name to use for grouping the bars (hue).
+
+    Returns
+    -------
+    None
+    """
+    # 1. Load data and create a DataFrame
+    try:
+        adata = ad.read_h5ad(h5ad_dir, backed = 'r')
+    except IOError:
+        print(f"Error: Could not read file at {h5ad_dir}")
+        return
+
+    df = pd.DataFrame({
+        'id': adata.obs[sample_id_col].astype(str),
+        'category': adata.obs[category_col].astype(str),
+        'condition': adata.obs[condition_col].astype(str)
+    })
+
+    # 2. Calculate unique counts
+    counts = df.groupby(['category', 'condition'])['id'].nunique().reset_index(name='count')
+
+    # 3. Create the plot
+    plt.figure(figsize=(8,8))
+    sns.barplot(data=counts, x='category', y='count', hue='condition')
+
+    # 4. Customize the plot
+    # Set labels and title
+    plt.title(f'Number of Samples by {category_col} and {condition_col}')
+    plt.xlabel(category_col)
+    plt.ylabel('Count')
+    plt.legend(title=condition_col.title())
+
+
+    unique_categories = counts['category'].nunique()
+        
+    plt.xticks(ticks=range(unique_categories), labels=adata.obs[category_col].unique().astype(str))
+
+    # Set y-axis ticks for clarity
+    max_count = counts['count'].max()
+    plt.ylim(0, max_count + 1)
+    plt.yticks(range(int(max_count) + 2))
+
+    plt.tight_layout()
+
+    # 5. Save and show the plot
+    try:
+        plt.savefig(save_dir, dpi=300, bbox_inches='tight')
+        print(f"Plot saved to {save_dir}")
+    except IOError:
+        print(f"Error: Could not save plot to {save_dir}")
+    
+    plt.show()
     
 '''
 import os
