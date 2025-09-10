@@ -6,7 +6,7 @@ import pandas as pd
 import os
 
 def _find_top_genes(df, n_top=15, method='sum', metric_cols=None, fdr_cols=None):
-    """Worker function that finds top genes based on significance and a ranking metric."""
+    """Finds top genes based on significance and a ranking metric."""
     if metric_cols is None or fdr_cols is None:
         raise ValueError("metric_cols and fdr_cols must be provided.")
 
@@ -25,7 +25,7 @@ def _find_top_genes(df, n_top=15, method='sum', metric_cols=None, fdr_cols=None)
 
 
 def _annotate_genes(ax, df, genes, x_col, y_col, outline_color, outline=True, text=False, scatter_kwargs=None, text_kwargs=None):
-    """Worker function that outlines and/or annotates a list of genes on the plot."""
+    """Outlines and/or annotates a list of genes on the plot."""
     # Set empty dictionaries as defaults to avoid errors
     if scatter_kwargs is None:
         scatter_kwargs = {}
@@ -286,7 +286,6 @@ def plot_block_specificity(partition_label,
     plt.show()
     print(f'Block specificity plot saved to {out_path}')
     
-'''
 import os
 import subprocess
 import tempfile
@@ -458,4 +457,3 @@ def generate_alluvial_plot(
         if temp_file_path and os.path.exists(temp_file_path):
             print(f"Cleaning up temporary file: {temp_file_path}")
             os.remove(temp_file_path)
-'''
