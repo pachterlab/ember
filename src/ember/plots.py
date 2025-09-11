@@ -165,6 +165,8 @@ def plot_partition_specificity(partition_label,
     ax.set_title(fr'$\zeta$ vs $\Psi$ for {partition_label}', fontsize=fontsize + 3)
     ax.set_xticks(np.arange(0, 1.1, 0.2))
     ax.set_yticks(np.arange(0, 1.1, 0.2))
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
     ax.tick_params(axis='both', labelsize=fontsize - 2)
     ax.grid(True, linestyle='--', linewidth=0.5)
     fig.tight_layout(rect=[0, 0, 0.85, 1])
@@ -362,11 +364,12 @@ def plot_sample_counts(
     plt.yticks(range(int(max_count) + 2))
 
     plt.tight_layout()
+    out_path = (os.path.join(save_dir, f"summary_barplot.png"))
 
     # Save and show the plot
     try:
-        plt.savefig(save_dir, dpi=300, bbox_inches='tight')
-        print(f"Plot saved to {save_dir}")
+        plt.savefig(out_path, dpi=300, bbox_inches='tight')
+        print(f"Plot saved to {out_path}")
     except IOError:
         print(f"Error: Could not save plot to {save_dir}")
     
@@ -464,11 +467,13 @@ def plot_psi_blocks(
     plt.ylim(0, 1)
     
     plt.tight_layout()
+    
+    out_path = (os.path.join(save_dir, f"psi_blocks_barplot__{gene_name}_{partition_label}.png"))
 
     # Save and show the plot
     try:
-        plt.savefig(save_dir, dpi=300, bbox_inches='tight')
-        print(f"Plot successfully saved to {save_dir}")
+        plt.savefig(out_path, dpi=300, bbox_inches='tight')
+        print(f"Plot successfully saved to {out_path}")
     except IOError as e:
         print(f"Error: Could not save the plot to {save_dir}. Reason: {e}")
     
