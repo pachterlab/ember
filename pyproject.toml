@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ember"                      # the distribution name on PyPI (can be "ember-package" if "ember" is taken)
-version = "0.1.0"
+version = "0.1.1"
 description = "ember: Entropy Metrics for Biological ExploRation"
 readme = "README.md"
 requires-python = ">=3.9"
