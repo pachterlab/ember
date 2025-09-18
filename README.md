@@ -1,5 +1,5 @@
 # ember
-ember is a python and command line tool that can identify highly specific genes to a given partition (e.g., "Age", "Genotype", "Cell type")in high dimentional scRNAseq data. For an overview of how ember works refer to [the how to use ember guide (slides)]("./assets/ember_guide.pdf").
+ember is a python and command line tool that can identify highly specific genes to a given partition (e.g., "Age", "Genotype", "Cell type")in high dimentional scRNAseq data. For an overview of how ember works refer to [the ember guide (slides)](./assets/ember_guide.pdf).
 
 <p align="center">
   <img alt="ember in a nutshell" src="./assets/ember_nutshell.jpg" width="100%">
@@ -16,10 +16,10 @@ pip install ember
 
 ## Documentation
 
-For more detailed information, refer to the [official documentation]("./assets/ember_documentation.pdf").
+For more detailed information, refer to the [official documentation](./assets/ember_documentation.pdf).
 
 
 ## License
 
-This project is licensed under the [MIT License]("./LICENSE").
+This project is licensed under the [MIT License](./LICENSE).
 
