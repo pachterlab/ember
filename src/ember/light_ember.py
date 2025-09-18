@@ -403,11 +403,11 @@ def light_ember(
                                        category_col = category_col, 
                                        condition_col = condition_col, 
                                        block_label=block_label,
+                                       n_iterations=n_pval_iterations, 
+                                       n_cpus=n_cpus, 
                                        Psi_real = aggregate_entropy_df[f"Psi_mean_{partition_label}"], 
                                        Psi_block_df_real = mean_Psi_block, 
-                                       Zeta_real = aggregate_entropy_df[f"Zeta_mean_{partition_label}"], 
-                                       n_iterations=n_pval_iterations, 
-                                       n_cpus=n_cpus)
+                                       Zeta_real = aggregate_entropy_df[f"Zeta_mean_{partition_label}"] )
 
             
         finally:

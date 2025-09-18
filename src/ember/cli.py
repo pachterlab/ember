@@ -218,28 +218,6 @@ def main():
         help="Block in partition to calculate p-values for. Default: None (Psi and Zeta only)."
     )
 
-    # --- Internal-use Arguments ---
-    internal_group = generate_pvals_parser.add_argument_group('Internal Arguments (used by light_ember)')
-    internal_group.add_argument(
-        "--Psi_real",
-        type=str,
-        default=None,
-        help="Observed Psi values for each gene (pd.Series). Not required for user runs."
-    )
-    internal_group.add_argument(
-        "--Psi_block_df_real",
-        type=str,
-        default=None,
-        help="Observed Psi_block values for all blocks in chosen partition (pd.DataFrame). "
-             "Not required for user runs."
-    )
-    internal_group.add_argument(
-        "--Zeta_real",
-        type=str,
-        default=None,
-        help="Observed Zeta values for each gene (pd.Series). Not required for user runs."
-    )
-
     # --- Performance & Iterations ---
     perf_group = generate_pvals_parser.add_argument_group('Performance Parameters')
     perf_group.add_argument(
@@ -261,6 +239,28 @@ def main():
         default=1,
         help="Number of CPUs to use for p-value calculation (default: 1). "
              "Set to -1 to use all available cores but one."
+    )
+    
+    # --- Internal-use Arguments ---
+    internal_group = generate_pvals_parser.add_argument_group('Internal Arguments (used by light_ember)')
+    internal_group.add_argument(
+        "--Psi_real",
+        type=str,
+        default=None,
+        help="Observed Psi values for each gene (pd.Series). Not required for user runs."
+    )
+    internal_group.add_argument(
+        "--Psi_block_df_real",
+        type=str,
+        default=None,
+        help="Observed Psi_block values for all blocks in chosen partition (pd.DataFrame). "
+             "Not required for user runs."
+    )
+    internal_group.add_argument(
+        "--Zeta_real",
+        type=str,
+        default=None,
+        help="Observed Zeta values for each gene (pd.Series). Not required for user runs."
     )
 
     
@@ -480,14 +480,10 @@ def main():
     # =================================================================
     args = parser.parse_args()
 
-    # Convert the argparse Namespace to a dictionary
     kwargs = vars(args)
-
-    # Pop the 'command' key from the dictionary because our functions don't expect it.
-    # The function to call is determined by the command's value.
     command_to_run = kwargs.pop('command')
 
-    # Now, kwargs only contains arguments specific to the chosen command.
+
     if command_to_run == "light_ember":
         light_ember(**kwargs)
 

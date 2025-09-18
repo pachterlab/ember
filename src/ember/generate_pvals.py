@@ -78,12 +78,12 @@ def generate_pvals(
     category_col, 
     condition_col,
     block_label=None,
-    Psi_real = None,
-    Psi_block_df_real = None,
-    Zeta_real = None,
     seed = 42,
     n_iterations=1000,
-    n_cpus=1
+    n_cpus=1, 
+    Psi_real = None,
+    Psi_block_df_real = None,
+    Zeta_real = None
 ):
     """
     Calculate empirical p-values for entropy metrics from permutation test results.
@@ -120,11 +120,11 @@ def generate_pvals(
     save_dir : str, Required
         Path to directory where results will be saved. 
         
-    sample_id_col : str, default = None
+    sample_id_col : str, Required
         The column in `.obs` with unique identifiers for each sample or replicate
         (e.g., 'sample_id', 'mouse_id').
         
-    category_col : str, default = None
+    category_col : str, Required
         The column in `.obs` defining the primary group to balance across in order
         to generate a balanced sample of the experiment. (e.g., 'disease_status', 'mouse_strain').
         Refer to readme for further explanation on how to select category and condition columns.
@@ -146,18 +146,6 @@ def generate_pvals(
         Block in partition to calucate p-values for. 
         Default set to None, program will continue generating p-values for only Psi and Zeta. 
     
-    Psi_real : pd.Series, default=None
-        Observed Psi values for each gene. 
-        Used by light_ember, not necessary for user use. 
-        
-    Psi_block_df_real : pd.Dataframe, default = None
-        Observed Psi_block values for all blocks in chosen partition. 
-        Used by light_ember, not necessary for user use.
-        
-    Zeta_real : pd.Series, default=None
-        Observed Zeta values for each gene.
-        Used by light_ember, not necessary for user use.
-        
     seed : int, default=42
         The random seed for reproducible draws, by default 42.
 
@@ -170,8 +158,20 @@ def generate_pvals(
     n_cpus : int, default=1
         Number of cpus to use to perfrom p-value calculation. 
         Default set to 1 assuming no parallel compute power on local machine. 
-        User can input -1 to use all available cpus but one. 
-
+        User can input -1 to use all available cpus but one.
+    
+    Psi_real : pd.Series, default=None
+        Observed Psi values for each gene. 
+        Used by light_ember, not necessary for user use. 
+        
+    Psi_block_df_real : pd.Dataframe, default = None
+        Observed Psi_block values for all blocks in chosen partition. 
+        Used by light_ember, not necessary for user use.
+        
+    Zeta_real : pd.Series, default=None
+        Observed Zeta values for each gene.
+        Used by light_ember, not necessary for user use.
+        
 
     Returns
     -------
