@@ -10,12 +10,15 @@ from statsmodels.stats.multitest import multipletests
 from .generate_entropy_metrics import generate_entropy_metrics
 from .sample_replicates import generate_balanced_draws
 
-def worker_wrapper(args):
-    """Unpacks arguments and calls the real worker function."""
-    return run_permutation_task(*args)
+def _worker_wrapper(args):
+    """
+    Unpacks a tuple of arguments and calls the real worker function.
+    Needed because pool.imap only accepts functions with a single argument.
+    """
+    return _run_permutation_task(*args)
 
-# 3. THE PRODUCER: Prepares all data and arguments for each task
-def prepare_permutation_tasks(h5ad_dir, sets, sample_id_col, partition_label, block_label, n_iterations):
+
+def _prepare_permutation_tasks(h5ad_dir, sets, sample_id_col, partition_label, block_label, n_iterations):
     """
     Generator that handles all file I/O. It prepares and yields a tuple
     of all arguments needed for each permutation task.
@@ -23,8 +26,6 @@ def prepare_permutation_tasks(h5ad_dir, sets, sample_id_col, partition_label, bl
     adata = ad.read_h5ad(h5ad_dir, backed='r')
     
     for i in range(n_iterations):
-        # Use the provided sets to define the data for this iteration
-        # This assumes len(sets) is sufficient for n_iterations
         current_set_index = i % len(sets)
         subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[current_set_index])].index
         subset_in_memory = adata[subset_ids_index, :].to_memory().copy()
@@ -40,22 +41,21 @@ def prepare_permutation_tasks(h5ad_dir, sets, sample_id_col, partition_label, bl
         
     adata.file.close()
 
-def run_permutation_task(i, data_matrix, obs_df, var_index, original_labels, partition_label, block_label):
+def _run_permutation_task(i, data_matrix, obs_df, var_index, original_labels, partition_label, block_label):
     """
-    Lean worker function. Receives raw data, rebuilds an AnnData object,
-    runs the permutation, and calculates metrics.
+    Worker that accepts raw data and rebuilds a clean AnnData object.
+    Runs generate_entropy_metrics on rebuild anndata.
     """
     # Rebuild a clean AnnData object
     subset = ad.AnnData(X=data_matrix, obs=obs_df)
     subset.var.index = var_index
     
-    # Perform the core logic: shuffling the labels
+    # Shuffling the labels
     subset.obs[partition_label] = np.random.permutation(original_labels)
     
     # Generate metrics
     Psi, Psi_block_df, Zeta = generate_entropy_metrics(subset, partition_label)
     
-    # Format results into Series
     Psi_series = pd.Series(Psi, index=Psi_block_df.index)
     Zeta_series = pd.Series(Zeta, index=Psi_block_df.index)
     
@@ -70,26 +70,31 @@ def run_permutation_task(i, data_matrix, obs_df, var_index, original_labels, par
 
 
 def generate_pvals(
-    adata = None,
-    h5ad_dir = None,
-    partition_label = None,
-    entropy_metrics_dir = None,
-    is_sampled = True,
-    save_dir = None,
+    h5ad_dir ,
+    partition_label,
+    entropy_metrics_dir,
+    save_dir,
+    sample_id_col, 
+    category_col, 
+    condition_col,
+    block_label=None,
     Psi_real = None,
     Psi_block_df_real = None,
     Zeta_real = None,
-    sample_id_col = None, 
-    category_col = None, 
-    condition_col = None,
     seed = 42,
-    block_label=None,
     n_iterations=1000,
     n_cpus=1
 ):
     """
-    Calculate empirical p-values for entropy metrics
-    from permutation test results.
+    Calculate empirical p-values for entropy metrics from permutation test results.
+    This function can be called manually or accessed through light_ember with 
+    partition_pvals = True or block_pvals = True. 
+
+    Manual access useful if wanting to generate p-values for multiple blocks and partitions of 
+    interest after initial investigation using entropy metrics. 
+    
+    Integrated access with light_ember is easier if investigating only a partition or
+    a block in a partition. 
     
     Entropy metrics generated:
         - Psi : Fraction of infromation explained by partition of choice
@@ -98,70 +103,71 @@ def generate_pvals(
 
     Parameters
     ----------
-    adata : AnnData, optional
-        An AnnData object already loaded in memory.
-        Required if `h5ad_dir` is not provided.
+    h5ad_dir : str, Required
+        Path to the `.h5ad` file to process.
+        Data should be log1p and depth normalized before running ember. 
+        Remove genes with less than 100 reads before running ember. 
         
-    h5ad_dir : str, optional
-        Path to the AnnData `.h5ad` file to process.
-        Required if `adata` is not provided.
-
-    partition_label : str
+    partition_label : str, Required
         Column in `.obs` used to partition cells for entropy calculations 
-        (e.g., "celltype"). Required to run process.
+        (e.g., "celltype", "Genotype", "Age"). Required to run process. 
+        If performing calculation on interaction term, first create a column 
+        in `.obs` concatnating the two columns of interested with a semicolon (:).
         
-    entropy_metrics_dir : str, optional
-        Path to csv with entropy metrics to use for .
-        Required if `adata` is not provided.
-        
-    is_sampled : bool, optional
-        Boolean to tell the program whether the input entropy metrics are sampled metrics or unsampled metrics. 
-        Default is True.
+    entropy_metrics_dir : str, Required
+        Path to csv with entropy metrics to use for generating pvals.
     
-    save_dir : str
-        Path to directory where results will be saved. Required to run process.
+    save_dir : str, Required
+        Path to directory where results will be saved. 
         
-    partition_label : str
-        Column in `.obs` to partition by when calculating entropy metrics.
-        
-    Psi_real : pd.Series
-        Observed Psi values for each gene.
-        
-    Psi_block_df_real : pd.Dataframe
-        Observed Psi_block values for all blocks in chosen partition. 
-        
-    Zeta_real : pd.Series
-        Observed Zeta values for each gene.
-        
-    sample_id_col : str
+    sample_id_col : str, default = None
         The column in `.obs` with unique identifiers for each sample or replicate
-        (e.g., 'sample_id', 'mouse_id'). Required to run process.
+        (e.g., 'sample_id', 'mouse_id').
         
-    category_col : str
-        The column in `.obs` defining the primary groups to balance within
-        (e.g., 'disease_status', 'mouse_strain'). Required to run process.
+    category_col : str, default = None
+        The column in `.obs` defining the primary group to balance across in order
+        to generate a balanced sample of the experiment. (e.g., 'disease_status', 'mouse_strain').
+        Refer to readme for further explanation on how to select category and condition columns.
+        category_col and condition_col are interchangable.
+        If balancing across more than 2 variables, generate interaction terms, create a column
+        in `.obs` concatnating the two (or more) columns of interested with a semicolon (:). 
+        This way balancing can be done across as many variables as desired. 
         
-    condition_col : str
-        The column in `.obs` containing the conditions to balance across within
-        each category (e.g., 'sex', 'treatment'). Required to run process.
+    condition_col : str, Required
+        The column in `.obs` containing the conditions to balance within
+        each category to generate a balanced sample of the experiment.  (e.g., 'sex', 'treatment').
+        Refer to readme for further explanation on how to select category and condition columns. 
+        category_col and condition_col are interchangable. 
+        If balancing across more than 2 variables, generate interaction terms, create a column
+        in `.obs` concatnating the two (or more) columns of interested with a semicolon (:). 
+        This way balancing can be done across as many variables as desired. 
         
-    num_draws : int, optional
-        The number of balanced subsets to generate, by default 100.
-        
-    seed : int, optional
-        The random seed for reproducible draws, by default 42.
-        
-    block_label : str
-        Block in partition that the user wishes to calucate p-values for. 
+    block_label : str, default=None
+        Block in partition to calucate p-values for. 
         Default set to None, program will continue generating p-values for only Psi and Zeta. 
+    
+    Psi_real : pd.Series, default=None
+        Observed Psi values for each gene. 
+        Used by light_ember, not necessary for user use. 
         
-    n_iterations : int
+    Psi_block_df_real : pd.Dataframe, default = None
+        Observed Psi_block values for all blocks in chosen partition. 
+        Used by light_ember, not necessary for user use.
+        
+    Zeta_real : pd.Series, default=None
+        Observed Zeta values for each gene.
+        Used by light_ember, not necessary for user use.
+        
+    seed : int, default=42
+        The random seed for reproducible draws, by default 42.
+
+    n_iterations : int, default = 1000
         Number of iterations to calulate p-vales. Default set to 1000. 
         Note that doing fewer than 1000 iterations is a good choice to get first pass p-values
         but for reliable p-values 1000 iterations is recommended. 
         Larger than 1000 will give you more relibale p-values but will increase runtime significantly. 
         
-    n_cpus : int
+    n_cpus : int, default=1
         Number of cpus to use to perfrom p-value calculation. 
         Default set to 1 assuming no parallel compute power on local machine. 
         User can input -1 to use all available cpus but one. 
@@ -169,45 +175,47 @@ def generate_pvals(
 
     Returns
     -------
-    final : pd.DataFrame
-        If block is set equal to the default 'none', program outputs dataFrame with columns:
-        ['Psi', 'Psi p-value', 'Zeta', 'Zeta p-value']
+    None
         
-        If block is not equal to 'none', program outputs dataFrame with columns:
-        ['Psi', 'Psi p-value', 'Zeta', 'Zeta p-value', Psi_block, 'Psi_block p-value]
-        
+    Notes
+    -------
+    **What to expect inside 'pvals_entropy_metrics.csv'**:
+    
+    - gene_name: All genes in `.var`
+    - Psi: Psi scores averaged over n draws (between 0 and 1) generated by light_ember for each gene in `.var`.
+    - Psi p-value: Permutation based empirical p-values for observed Psi scores for each gene in `.var`.
+    - Zeta: Zeta scores averaged over n draws (between 0 and 1) generated by light_ember for each gene in `.var`.
+    - Zeta p-value: Permutation based empirical p-values for observed Zeta scores for each gene in `.var`.
+    - Psi FDR: Multiple testing corrected q-values for Psi scores.  
+    - Zeta FDR: Multiple testing corrected q-values for Zeta scores.Correction perfromed to include all p-values generated in a single file (Psi and Zeta). 
+    
+    if block_pvals = True and a single block_label is given:
+    
+    - psi_block: psi_block scores (between 0 and 1) generated by light_ember for each gene in `.var`.
+    - psi_block p-value: Permutation based empirical p-values for observed psi_block scores for each gene in `.var`.
+    - psi_block FDR: Multiple testing corrected q-values for psi_block scores. Correction perfromed to include all p-values generated in a single file (Psi, psi_block and Zeta). 
+                     
     """
-    # Required argument validation 
-    #Validate AnnData
-
-    # 1. Handle the case where the user provides an in-memory object
-    if adata is not None:
-        if not isinstance(adata, sc.AnnData):
-            raise TypeError("The provided `adata` must be an AnnData object.")
-        print('Using the provided in-memory AnnData object. Please use `h5ad_dir` argument for backed mode.')
-
-    # 2. Handle the case where the user provides a file path
-    elif h5ad_dir is not None:
-        adata_path = os.path.expanduser(h5ad_dir)
-        if not os.path.exists(adata_path):
-            raise FileNotFoundError(f"The file specified by `h5ad_dir` was not found at: {adata_path}")
+    #Validate h5ad_dir
+    adata_path = os.path.expanduser(h5ad_dir)
+    if not os.path.exists(adata_path):
+        raise FileNotFoundError(f"The file specified by `h5ad_dir` was not found at: {adata_path}")
         
-        print(f'Loading AnnData object from {adata_path} in backed mode.')
-        adata = sc.read_h5ad(h5ad_dir, backed = 'r')
+    print(f'Loading AnnData object from {adata_path} in backed mode.')
+    adata = sc.read_h5ad(h5ad_dir, backed = 'r')
 
-    # 3. Handle the case where no input is provided
-    else:
-        raise ValueError("You must provide either an `adata` object or an `h5ad_dir` path.")
-
-     # Validate partition_label
-    if partition_label is None:
-        raise ValueError("`partition_label` must be provided.")
-   
+    # Validate partition_label
     if partition_label not in adata.obs.columns:
         raise ValueError(
             f"partition_label '{partition_label}' not found in adata.obs columns. "
             f"Available columns: {list(adata.obs.columns)}"
         )
+        
+    # Validate entropy_metrics_dir
+    entropy_path = os.path.expanduser(entropy_metrics_dir)
+    if not os.path.exists(entropy_path):
+        raise FileNotFoundError(f"The folder specified by `entropy_metrics_dir` was not found at: {entropy_path}")
+        
     # Valid block label 
     if block_label is not None:    
         valid_blocks = adata.obs[partition_label].unique()
@@ -216,42 +224,38 @@ def generate_pvals(
                 f"block_label '{block_label}' not found in adata.obs['{partition_label}']. "
                 f"Available block labels: {list(valid_blocks)}"
         )
-            
-    if entropy_metrics_dir is not None:
-        entropy_metrics_dir = os.path.expanduser(entropy_metrics_dir)
-        
-        if is_sampled:
-            all_entropy_metrics = pd.read_csv(os.path.join(entropy_metrics_dir, 
-                                                       f"combined_entropy_metrics_{partition_label}.csv"), 
-                                          index_col = 0)
-            Psi_real = all_entropy_metrics[f"Psi_mean_{partition_label}"]
-            Zeta_real = all_entropy_metrics[f"Zeta_mean_{partition_label}"]
-            mean_Psi_block_dir = os.path.join(entropy_metrics_dir, "mean_Psi_block_df")
-            Psi_block_df_real = pd.read_csv(os.path.join(mean_Psi_block_dir, 
-                                                       f"mean_Psi_block_df_{partition_label}.csv"), 
-                                          index_col = 0)
-        if not is_sampled:
-            all_entropy_metrics = pd.read_csv(os.path.join(entropy_metrics_dir, 
-                                                       f"entropy_metrics_unsampled_{partition_label}.csv"), 
-                                          index_col = 0)
-            Psi_real = all_entropy_metrics[f"Psi_unsampled_{partition_label}"]
-            Zeta_real = all_entropy_metrics[f"Zeta_unsampled_{partition_label}"]
-            unsampled_Psi_block_dir = os.path.join(entropy_metrics_dir, "unsampled_Psi_block_df")
-            Psi_block_df_real = pd.read_csv(os.path.join(unsampled_Psi_block_dir, 
-                                                       f"Psi_block_unsampled_{partition_label}.csv"), 
-                                          index_col = 0)
-            
-    if entropy_metrics_dir is None and all(
-        x is None for x in (Psi_real, Psi_block_df_real, Zeta_real)
-        ):
-        raise ValueError(
-            "You must provide either `entropy_metrics_dir` (path to folder with metrics file) "
-            "OR all of `Psi_real`, `Psi_block_df_real`, and `Zeta_real` individually."
-        )
-    # Validate sampling inputs
-    if sample_id_col is None or category_col is None or condition_col is None:
-        raise ValueError("You must provide `sample_id_col`, `category_col`, and `condition_col` for sampling of replicates for p-values.")
+    # Validate sample_id_col, category_col, and condition_col 
+    required_params = {
+        "sample_id_col": sample_id_col, 
+        "category_col": category_col, 
+        "condition_col": condition_col
+    }
 
+    required_cols = list(required_params.values())
+    missing_cols = [col for col in required_cols if col not in adata.obs.columns]
+
+    if missing_cols:
+        raise ValueError(
+            f"The following required column(s) were not found in adata.obs: {missing_cols}. "
+            f"\nAvailable columns are: {list(adata.obs.columns)}"
+        )
+        
+    #Override entropy_metrics_dir if required arguments are provided. 
+    #Functionality for intergration with light_ember
+    
+    if any(v is not None for v in (Psi_real, Psi_block_df_real, Zeta_real)):
+        entropy_metrics_dir = os.path.expanduser(entropy_metrics_dir)
+        all_entropy_metrics = pd.read_csv(os.path.join(entropy_metrics_dir, 
+                                                   f"entropy_metrics_{partition_label}.csv"), 
+                                      index_col = 0)
+        Psi_real = all_entropy_metrics[f"Psi_mean_{partition_label}"]
+        Zeta_real = all_entropy_metrics[f"Zeta_mean_{partition_label}"]
+        mean_Psi_block_dir = os.path.join(entropy_metrics_dir, "Psi_block_df")
+        Psi_block_df_real = pd.read_csv(os.path.join(mean_Psi_block_dir, 
+                                                   f"mean_Psi_block_df_{partition_label}.csv"), 
+                                      index_col = 0)
+            
+    print(f'\nGenerating p-values for entropy metrics.')
     
     mask = Psi_real > 0
     Psi_real = Psi_real[mask]
@@ -260,18 +264,11 @@ def generate_pvals(
     
     # Generate 1000 subsets of replicates to caluclate p-values
     sets, usage = generate_balanced_draws(adata, sample_id_col, category_col, condition_col,num_draws = n_iterations, seed = seed)
-    
-    #Overwrite adata object from memory if using h5ad_dir to activate backed mode
-    if h5ad_dir is not None:
-        del(adata)
-        gc.collect()
-        adata = None
-    
-    # Function to scramble partition labels to calculate p-values. 
-    #Outputs caluclated Psi, Psi_block and Zeta value for each iteration i. 
+    del(adata)
+    gc.collect()
     
     # Create the generator that will produce the arguments for each task
-    task_generator = prepare_permutation_tasks(
+    task_generator = _prepare_permutation_tasks(
         h5ad_dir,
         sets,
         sample_id_col,
@@ -284,9 +281,7 @@ def generate_pvals(
     results = []
     # Create a pool of worker processes
     with multiprocessing.Pool(processes=n_cpus) as pool:
-        # tqdm creates a progress bar for all your tasks
-        # imap_unordered is highly efficient
-        for result in tqdm(pool.imap_unordered(worker_wrapper, task_generator), total=n_iterations):
+        for result in tqdm(pool.imap_unordered(_worker_wrapper, task_generator), total=n_iterations):
             results.append(result)
 
     Psi_df = pd.DataFrame({f"Psi_{i}": r[0] for i, r in enumerate(results)})
@@ -328,47 +323,36 @@ def generate_pvals(
         
     # Perfrom global multiple testing correction for all tests and save in FDR columns
    
-    # 1) Identify p-value columns (or hardcode your list)
     pval_cols = [c for c in final.columns if c.lower().endswith('p-value')]
-
-    # 2) Collect only valid (non-null, finite) p-values, remembering their (row index, col)
-    records = []  # list of (row_index, col_name, pval)
+    records = [] 
     for col in pval_cols:
         s = final[col]
         mask_valid = s.notna() & np.isfinite(s.values)
         for idx in final.index[mask_valid]:
             records.append((idx, col, float(final.at[idx, col])))
 
-    # 3) If nothing to correct, optionally skip
-    if records:
-        all_pvals = np.array([r[2] for r in records], dtype=float)
+    all_pvals = np.array([r[2] for r in records], dtype=float)
 
-        # 4) Global FDR across ALL p-values (both columns) at once
-        _, qvals, _, _ = multipletests(all_pvals, method='fdr_bh')
+    # Global FDR across ALL p-values (both columns) at once
+    _, qvals, _, _ = multipletests(all_pvals, method='fdr_bh')
 
-        # 5) Ensure destination FDR columns exist, initialized to NaN
-        for col in pval_cols:
-            fdr_col = col.replace('p-value', 'FDR')
-            if fdr_col not in final.columns:
-                final[fdr_col] = np.nan
+    for col in pval_cols:
+        fdr_col = col.replace('p-value', 'FDR')
+        if fdr_col not in final.columns:
+            final[fdr_col] = np.nan
 
-        # 6) Write back corrected q-values to the matching rows/columns
-        for (idx, col, _), q in zip(records, qvals):
-            fdr_col = col.replace('p-value', 'FDR')
-            final.at[idx, fdr_col] = q
+    # Write back corrected q-values to the matching rows/columns
+    for (idx, col, _), q in zip(records, qvals):
+        fdr_col = col.replace('p-value', 'FDR')
+        final.at[idx, fdr_col] = q
+
+
+    save_dir = os.path.expanduser(save_dir)
+    os.makedirs(save_dir, exist_ok=True)
+    if block_label is not None:
+        out_path = os.path.join(save_dir, f"pvals_entropy_metrics_{partition_label}_{block_label}.csv")
     else:
-        print("No valid p-values found to correct.")
-
-    # 7) Save or return
-    if save_dir is not None:
-        save_dir = os.path.expanduser(save_dir)
-        os.makedirs(save_dir, exist_ok=True)
-        if block_label is not None:
-            out_path = os.path.join(save_dir, f"pvals_entropy_metrics_{partition_label}_{block_label}.csv")
-        else:
-            out_path = os.path.join(save_dir, f"pvals_entropy_metrics_{partition_label}.csv")
-        final.to_csv(out_path)
-        print(f'\nSaved all entropy metrics along with pvalues to {out_path}')
-    else:
-        return final
+        out_path = os.path.join(save_dir, f"pvals_entropy_metrics_{partition_label}.csv")
+    final.to_csv(out_path)
+    print(f'\nSaved all entropy metrics along with pvalues to {out_path}')
     

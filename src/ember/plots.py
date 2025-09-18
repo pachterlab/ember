@@ -8,7 +8,9 @@ import anndata as ad
 import os
 
 def _find_top_genes(df, n_top=15, method='sum', metric_cols=None, fdr_cols=None):
-    """Worker function that finds top genes based on significance and a ranking metric."""
+    """
+    Worker function that finds top genes based on significance and a ranking metric.
+    """
     if metric_cols is None or fdr_cols is None:
         raise ValueError("metric_cols and fdr_cols must be provided.")
 
@@ -27,7 +29,9 @@ def _find_top_genes(df, n_top=15, method='sum', metric_cols=None, fdr_cols=None)
 
 
 def _annotate_genes(ax, df, genes, x_col, y_col, outline_color, outline=True, text=False, scatter_kwargs=None, text_kwargs=None):
-    """Worker function that outlines and/or annotates a list of genes on the plot."""
+    """
+    Worker function that outlines and/or annotates a list of genes on the plot.
+    """
     # Set empty dictionaries as defaults to avoid errors
     if scatter_kwargs is None:
         scatter_kwargs = {}
@@ -68,25 +72,39 @@ def plot_partition_specificity(partition_label,
 
     This function reads p-value data, colors genes based on their statistical
     significance for Psi and Zeta scores, and highlights top "marker" and
-    "housekeeping" genes. It also allows for custom highlighting of a
-    user-provided gene list.
+    "housekeeping" genes. 
+    Allows for custom highlighting of a user-provided gene list.
+    Fontsize and color pallette can be customized. 
 
     Parameters
     ----------
-    partition_label : str
+    partition_label : str, Required.
         The label for the partition being plotted, used in the plot title.
-    pvals_dir : str
+        
+    pvals_dir : str, Required.
         Path to the input CSV file containing p-values and scores (Psi, Zeta, FDRs).
         The CSV must have gene names as its index column.
-    save_dir : str
+        
+    save_dir : str, Required.
         Path where the output plot image will be saved.
-    highlight_genes : list[str], optional
+        
+    highlight_genes : list[str], default=None.
         A list of gene names to highlight and annotate on the plot, by default None.
-    fontsize : int, optional
+        
+    fontsize : int, default=18.
         The base font size for plot labels and text, by default 18.
-    custom_palette : list[str], optional
+        
+    custom_palette : list[str], default=None.
         A list of 7 hex color codes to customize the plot's color scheme.
         If None, a default palette is used.
+        Please provide list in this order 
+        ['significant by psi',
+        'significant by zeta',
+        'highlight genes',
+        'significant by both',
+        'cirlce markers',
+        'circle housekeeping genes',
+        'significant by neither']
 
     Returns
     -------
@@ -98,7 +116,6 @@ def plot_partition_specificity(partition_label,
         custom_palette = ['#CC6677', '#44AA99', '#AA4499', '#88CCEE', 
                           'black', '#332288', '#DDDDDD']
 
-    # --- Data and Color Setup ---
     pvals_dir = os.path.expanduser(pvals_dir)
     pvals = pd.read_csv(pvals_dir, index_col=0)
     df_plot = pvals[['Psi', 'Psi FDR', 'Zeta', 'Zeta FDR']].copy()
@@ -117,14 +134,14 @@ def plot_partition_specificity(partition_label,
     color_choices = [colors['both'], colors['psi'], colors['zeta']]
     df_plot['color'] = np.select(conditions, color_choices, default=colors['none'])
 
-    # --- Plotting ---
+    # Plotting
     fig, ax = plt.subplots(figsize=(12, 10))
 
     for color in df_plot['color'].unique():
         subset = df_plot[df_plot['color'] == color]
         ax.scatter(subset['Psi'], subset['Zeta'], color=color, alpha=0.6, zorder=1 if color == colors['none'] else 2)
 
-    # --- Gene Highlighting & Annotation ---
+    # Gene highlighting and annotation
     top_markers = _find_top_genes(df_plot, method='sum', metric_cols=['Psi', 'Zeta'], fdr_cols=['Psi FDR', 'Zeta FDR'])
     top_housekeepers = _find_top_genes(df_plot, method='difference', metric_cols=['Psi', 'Zeta'], fdr_cols=['Psi FDR', 'Zeta FDR'])
 
@@ -139,7 +156,7 @@ def plot_partition_specificity(partition_label,
                     scatter_kwargs=scatter_args,
                     text_kwargs=text_args)
 
-    # --- Text Boxes & Legend ---
+    # Text boxes and legend
     boxprops_marker = dict(boxstyle='round', facecolor='white', alpha=0.3, edgecolor=colors['marker'])
     ax.text(1.02, 0.95, 'Marker Genes:\n' + '\n'.join(top_markers), transform=ax.transAxes,
             fontsize=fontsize-4, bbox=boxprops_marker, va='top', ha='left')
@@ -159,7 +176,7 @@ def plot_partition_specificity(partition_label,
     ]
     ax.legend(handles=handles, fontsize=fontsize - 2, loc='lower left', frameon=True)
 
-    # --- Final Formatting ---
+    # Final formatting
     ax.set_xlabel(r'$\Psi$', fontsize=fontsize + 3)
     ax.set_ylabel(r'$\zeta$', fontsize=fontsize + 3)
     ax.set_title(fr'$\zeta$ vs $\Psi$ for {partition_label}', fontsize=fontsize + 3)
@@ -172,6 +189,7 @@ def plot_partition_specificity(partition_label,
     fig.tight_layout(rect=[0, 0, 0.85, 1])
     
     save_dir = os.path.expanduser(save_dir)
+    os.makedirs(save_dir, exist_ok=True)
     out_path = (os.path.join(save_dir, f"partition_specificity_scatterplot_{partition_label}.png"))
     plt.savefig(out_path)
     plt.show()
@@ -191,27 +209,42 @@ def plot_block_specificity(partition_label,
 
     This function reads p-value data, colors genes based on their statistical
     significance for Psi and psi_block scores, and highlights the top genes
-    significant in both metrics. It also allows for custom highlighting of a
-    user-provided gene list.
+    significant in both metrics. 
+    Allows for custom highlighting of a user-provided gene list.
+    Fontsize and color pallette can be customized. 
 
     Parameters
     ----------
-    partition_label : str
+    partition_label : str, Required.
         The label for the partition, used in the plot title.
-    block_label : str
+        
+    block_label : str, Required.
         The label for the block variable (e.g., a cell type or condition).
-    pvals_dir : str
+        
+    pvals_dir : str, Required.
         Path to the input CSV file containing p-values and scores.
         The CSV must have gene names as its index column.
-    save_dir : str
+        
+    save_dir : str, Required.
         Path where the output plot image will be saved.
-    highlight_genes : list[str], optional
+        
+    highlight_genes : list[str], default=None.
         A list of gene names to highlight and annotate on the plot, by default None.
-    fontsize : int, optional
+        
+    fontsize : int, default = 18. 
         The base font size for plot labels and text, by default 18.
-    custom_palette : list[str], optional
+        
+    custom_palette : list[str], default=None.
         A list of 6 hex color codes to customize the plot's color scheme.
         If None, a default palette is used.
+        Provide list of colors int his order:
+        ['significant by psi',
+        'significant by psi_block',
+        'highlight genes',
+        'significant by both',
+        'cirlce markers',
+        'circle housekeeping genes',
+        'significant by neither']
 
     Returns
     -------
@@ -223,7 +256,7 @@ def plot_block_specificity(partition_label,
         custom_palette = ['#CC6677', '#44AA99', '#AA4499', '#88CCEE', 
                           'black', '#DDDDDD']
         
-    # --- Data and Color Setup ---
+    # Setup
     pvals_dir = os.path.expanduser(pvals_dir)
     pvals = pd.read_csv(pvals_dir, index_col=0)
     df_plot = pvals[['Psi', 'Psi FDR', 'psi_block', 'psi_block FDR']].copy()
@@ -241,14 +274,14 @@ def plot_block_specificity(partition_label,
     color_choices = [colors['both'], colors['psi'], colors['block']]
     df_plot['color'] = np.select(conditions, color_choices, default=colors['none'])
     
-    # --- Plotting ---
+    # Plotting
     fig, ax = plt.subplots(figsize=(12, 10))
 
     for color in df_plot['color'].unique():
         subset = df_plot[df_plot['color'] == color]
         ax.scatter(subset['Psi'], subset['psi_block'], color=color, alpha=0.6)
 
-    # --- Gene Highlighting & Annotation ---
+    # Gene highlighting and annotation ---
     top_genes = _find_top_genes(df_plot, n_top=10, method='sum', metric_cols=['Psi', 'psi_block'], fdr_cols=['Psi FDR', 'psi_block FDR'])
     
     _annotate_genes(ax, df_plot, top_genes, 'Psi', 'psi_block', colors['top_genes'],
@@ -260,7 +293,7 @@ def plot_block_specificity(partition_label,
                     scatter_kwargs=scatter_args,
                     text_kwargs=text_args)
 
-    # --- Text Boxes & Legend ---
+    # Text boxes and legend
     boxprops = dict(boxstyle='round', facecolor='white', alpha=0.3, edgecolor=colors['top_genes'])
     ax.text(1.02, 0.95, 'Top Genes:\n' + '\n'.join(top_genes), transform=ax.transAxes,
             fontsize=fontsize-4, bbox=boxprops, va='top', ha='left')
@@ -275,7 +308,7 @@ def plot_block_specificity(partition_label,
     ]
     ax.legend(handles=handles, fontsize=fontsize - 2, loc='lower left', frameon=True)
 
-    # --- Final Formatting ---
+    # Final formatting
     ax.set_xlabel(r'$\Psi$', fontsize=fontsize + 3)
     ax.set_ylabel(fr'$\psi_{{{block_label}}}$', fontsize=fontsize + 3)
     ax.set_title(fr'$\psi_{{{block_label}}}$ vs $\Psi$ for {partition_label}', fontsize=fontsize + 3)
@@ -285,6 +318,7 @@ def plot_block_specificity(partition_label,
     fig.tight_layout(rect=[0, 0, 0.85, 1])
 
     save_dir = os.path.expanduser(save_dir)
+    os.makedirs(save_dir, exist_ok=True)
     out_path = (os.path.join(save_dir, f"block_specificity_scatterplot_{partition_label}_{block_label}.png"))
     plt.savefig(out_path)
     plt.show()
@@ -296,41 +330,63 @@ def plot_sample_counts(
     save_dir,
     sample_id_col,
     category_col,
-    condition_col):
+    condition_col, 
+    fontsize = 18):
     """
-    Generates and saves a bar plot showing the number of unique individuals
+    Generate a bar plot showing the number of unique individuals 
     per category and condition.
 
     This function reads an AnnData object from an .h5ad file in backed mode, 
     calculates the number of unique individuals for each combination of a given 
     category and condition, and visualizes these counts as a grouped bar plot.
+    Fontsize can be customized. 
 
     Parameters
     ----------
-    h5ad_dir : str
+    h5ad_dir : str, Required
         Path to the input AnnData (.h5ad) file.
-    save_dir : str
-        Path to save the output plot image (e.g., 'plot.png').
-    sample_id_col : str
+        
+    save_dir : str, Required
+        Path to directory to save the output plot image.
+        
+    sample_id_col : str, Required
         The column name in adata.obs that contains unique sample IDs.
-    category_col : str
+        
+    category_col : str, Required
         The column name to use for the primary categories on the x-axis.
-    condition_col : str
+        
+    condition_col : str, Required
         The column name to use for grouping the bars (hue).
+        
+    fontsize : int, default = 18. 
+        The base font size for plot labels and text, by default 18.
 
     Returns
     -------
     None
     
     """
-    h5ad_dir = os.path.expanduser(h5ad_dir)
-    save_dir = os.path.expanduser(save_dir)
     
-    try:
-        adata = ad.read_h5ad(h5ad_dir, backed = 'r')
-    except IOError:
-        print(f"Error: Could not read file at {h5ad_dir}")
-        return
+    #Validate h5ad_dir
+    adata_path = os.path.expanduser(h5ad_dir)
+    if not os.path.exists(adata_path):
+        raise FileNotFoundError(f"The file specified by `h5ad_dir` was not found at: {adata_path}")
+        
+    # Validate sample_id_col, category_col, and condition_col 
+    required_params = {
+        "sample_id_col": sample_id_col, 
+        "category_col": category_col, 
+        "condition_col": condition_col
+    }
+
+    required_cols = list(required_params.values())
+    missing_cols = [col for col in required_cols if col not in adata.obs.columns]
+
+    if missing_cols:
+        raise ValueError(
+            f"The following required column(s) were not found in adata.obs: {missing_cols}. "
+            f"\nAvailable columns are: {list(adata.obs.columns)}"
+        )
 
     df = pd.DataFrame({
         'id': adata.obs[sample_id_col].astype(str),
@@ -348,10 +404,10 @@ def plot_sample_counts(
 
     # Customize the plot
     # Set labels and title
-    plt.title(f'Number of Samples by {category_col} and {condition_col}')
-    plt.xlabel(category_col)
-    plt.ylabel('Count')
-    plt.legend(title=condition_col.title())
+    plt.title(f'Number of Samples by {category_col} and {condition_col}', fontsize = fontsize+2)
+    plt.xlabel(category_col, fontsize)
+    plt.ylabel('Count', fontsize)
+    plt.legend(title=condition_col.title(), fontsize = fontsize-2)
 
 
     unique_categories = counts['category'].nunique()
@@ -364,29 +420,28 @@ def plot_sample_counts(
     plt.yticks(range(int(max_count) + 2))
 
     plt.tight_layout()
+    
+    save_dir = os.path.expanduser(save_dir)
+    os.makedirs(save_dir, exist_ok=True)
     out_path = (os.path.join(save_dir, f"summary_barplot.png"))
 
     # Save and show the plot
-    try:
-        plt.savefig(out_path, dpi=300, bbox_inches='tight')
-        print(f"Plot saved to {out_path}")
-    except IOError:
-        print(f"Error: Could not save plot to {save_dir}")
-    
+    plt.savefig(out_path, dpi=300, bbox_inches='tight')
+    print(f"Plot saved to {out_path}")
+
     plt.tight_layout() 
     plt.show()
+    del(adata)
+    gc.collect()
     
     
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import os
 
 def plot_psi_blocks(
     gene_name,
     partition_label,
     psi_block_df_dir,
-    save_dir):
+    save_dir, 
+    fontsize = 18):
     """
     Generates and saves a bar plot of mean psi block values with error bars.
 
@@ -394,19 +449,26 @@ def plot_psi_blocks(
     psi block values and one for standard deviations. It plots the mean values
     for a specific gene as a bar plot with corresponding standard deviation
     error bars.
+    Fontsize can be customized. 
 
     Parameters
     ----------
-    gene_name : str
+    gene_name : str, Required
         The name of the gene (row) to select and plot from the CSV files.
-    partition_label : str
+        
+    partition_label : str, Required
         The partition label used to find the correct files (e.g., 'Genotype').
-    psi_block_df_dir : str
+        
+    psi_block_df_dir : str, Required
         Path to the directory containing the mean and std CSV files. Files must
         be named 'mean_Psi_block_df_{partition_label}.csv' and 
         'std_Psi_block_df_{partition_label}.csv'.
-    save_dir : str
-        Path to save the output plot image (e.g., 'plot.png').
+        
+    save_dir : str, Required
+        Path to directory to save the output plot image.
+        
+    fontsize : int, default=18. 
+        The base font size for plot labels and text, by default 18.
 
     Returns
     -------
@@ -457,9 +519,9 @@ def plot_psi_blocks(
     )
 
     # Customize the plot
-    plt.title(f'Mean $\psi$ values for {gene_name} in {partition_label}', fontsize=16)
-    plt.xlabel('Block', fontsize=12)
-    plt.ylabel(r'$\psi_{block}$', fontsize=14)
+    plt.title(f'Mean $\psi$_block values for {gene_name} in {partition_label}', fontsize=fontsize+2)
+    plt.xlabel('Block', fontsize=fontsize)
+    plt.ylabel(r'$\psi_{block}$', fontsize=fontsize)
     plt.xticks(rotation=45, ha='right')
     plt.grid(axis='x')
     
@@ -468,187 +530,13 @@ def plot_psi_blocks(
     
     plt.tight_layout()
     
-    out_path = (os.path.join(save_dir, f"psi_blocks_barplot__{gene_name}_{partition_label}.png"))
+    save_dir = os.path.expanduser(save_dir)
+    os.makedirs(save_dir, exist_ok=True)
+    out_path = (os.path.join(save_dir, f"psi_blocks_barplot_{gene_name}_{partition_label}.png"))
 
     # Save and show the plot
-    try:
-        plt.savefig(out_path, dpi=300, bbox_inches='tight')
-        print(f"Plot successfully saved to {out_path}")
-    except IOError as e:
-        print(f"Error: Could not save the plot to {save_dir}. Reason: {e}")
-    
+    plt.savefig(out_path, dpi=300, bbox_inches='tight')
+    print(f"Plot successfully saved to {out_path}")
+
     plt.show()
     
-'''
-import os
-import subprocess
-import tempfile
-import pandas as pd
-import scanpy as sc
-
-def check_r_package(pkg, pachterlab=True):
-    """
-    Checks for the presence of R and a specified R package.
-
-    This function executes a non-interactive R command to determine if a
-    package namespace can be loaded. It raises an error if the R executable
-    is not found or if the specified package is not installed.
-
-    Parameters
-    ----------
-    pkg (str): The name of the R package to check for.
-    
-    pachterlab (bool, optional): If True, the error message for a missing
-        package will include a URL pointing to the pachterlab GitHub
-        organization. By default, True.
-
-    Raises
-    ----------
-    RuntimeError:
-        If R is not installed or if the specified R package is not found.
-    """
-    
-    try:
-        result = subprocess.run(
-            ["R", "--quiet", "-e", f"if (!requireNamespace('{pkg}', quietly=TRUE)) quit(status=1)"],
-            capture_output=True, text=True
-        )
-        if result.returncode != 0:
-            if pachterlab:
-                raise RuntimeError(f"R package '{pkg}' is not installed. Please see installation instructions at https://github.com/pachterlab/{pkg}.git.")
-            else:
-                raise RuntimeError(f"R package '{pkg}' is not installed.")
-    except FileNotFoundError:
-        raise RuntimeError("R is not installed.")
-        
-
-def generate_alluvial_plot(
-    gene_name,
-    output_path,
-    columns,
-    wompwomp_path,
-    adata=None,
-    h5ad_dir=None,
-    column_weights="umi_total",
-    sorting_algorithm="tsp",
-    verbose=True,
-    dev_mode=False,
-    auto_adjust_text=True,
-    match_order="None",
-    axis_text_size=20,
-    save_height=9,
-    save_width=12
-):
-    """
-    Generates an alluvial plot by first creating the data and then plotting it.
-
-    This function is a one-stop-shop that first processes an AnnData object
-    to calculate UMI counts for specific genes and then immediately passes the 
-    resulting data to the `wompwomp`command-line tool to generate theplot.
-
-    Parameters
-    ----------
-    gene_name : (str or list of str)
-        The name of the gene or a list of gene names to analyze.
-    output_path : (str)
-        Path to save the output plot file (e.g., 'plot.pdf').
-    columns : (list of str)
-        Column names from `adata.obs` to use for the alluvial plot axes.
-    wompwomp_path : (str)
-        Path to wompwomp file (e.g., '/home/username/wompwomp/).
-    adata : (sc.AnnData, optional)
-        An in-memory AnnData object. One of `adata` or `h5ad_dir` must be provided.
-    h5ad_dir : (str, optional)
-        The file path to an .h5ad file. If provided, it's loaded in backed mode.
-    column_weights : (str, optional)
-        The column to use for flow weights. Defaults to 'umi_total'.
-    sorting_algorithm : (str, optional)
-        The sorting algorithm to use ('tsp', 'None', etc.). Defaults to 'tsp'.
-    verbose : (bool, optional)
-        Enables verbose output by adding the '-v' flag. Defaults to True.
-    dev_mode : (bool, optional)
-        Enables dev mode by adding the '--dev' flag. Defaults to True.
-    auto_adjust_text : (bool, optional)
-        Adds the '--auto_adjust_text' flag. Defaults to True.
-    match_order : (str, optional)
-        Argument for the '--match_order' flag. Defaults to 'None'.
-    axis_text_size : (int, optional)
-        Font size for axis text. Defaults to 20.
-    save_height : (int, optional)
-        Height of the saved plot in inches. Defaults to 9.
-    save_width : (int, optional)
-        Width of the saved plot in inches. Defaults to 12.
-    """
-    
-    # Check for R and the wompwomp package before doing any work
-    print("Step 0: Checking for R package 'wompwomp'...")
-    check_r_package("wompwomp")
-    print("Check successful.")
-
-    temp_file_path = None
-    try:
-        # --- Part 1: Generate the DataFrame ---
-        print("\nStep 1: Generating data for the alluvial plot...")
-
-        # 1a. Load AnnData object
-        if h5ad_dir is not None:
-            adata_path = os.path.expanduser(h5ad_dir)
-            if not os.path.exists(adata_path):
-                raise FileNotFoundError(f"File not found at: {adata_path}")
-            print(f'Loading AnnData from {adata_path} in backed mode.')
-            adata = sc.read_h5ad(h5ad_dir, backed='r')
-        elif adata is not None:
-            if not isinstance(adata, sc.AnnData):
-                raise TypeError("`adata` must be an AnnData object.")
-            print('Using the provided in-memory AnnData object.')
-        else:
-            raise ValueError("You must provide either an `adata` object or an `h5ad_dir` path.")
-
-        # 1b. Calculate UMI totals for the specified gene(s)
-        alluvial_df = adata.obs[columns].copy()
-        gene_adata = adata[:, gene_name].to_memory()
-        alluvial_df["umi_total"] = gene_adata.X.sum(axis=1).A1
-        alluvial_df['umi_total'] = alluvial_df['umi_total'] * 1000
-        rounded_df = alluvial_df.round({"umi_total": 0})
-        print("Data generation complete.")
-
-        # --- Part 2: Plot the DataFrame ---
-        print("\nStep 2: Plotting the generated data...")
-
-        # 2a. Save the generated DataFrame to a temporary file
-        temp_f = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False)
-        temp_file_path = temp_f.name
-        rounded_df.to_csv(temp_file_path, index=False)
-        temp_f.close()
-
-        
-        # 2b. Build and run the wompwomp command
-        os.environ['RETICULATE_CONDA'] = '/home/nikki/miniconda3/bin/conda'
-        wompwomp_executable_path = os.path.join(wompwomp_path, 'exec/wompwomp')
-        wompwomp_command = [
-            wompwomp_executable_path, "plot_alluvial",
-            "--df", temp_file_path,
-            "--graphing_columns", *columns,
-            "--column_weights", column_weights,
-            "--sorting_algorithm", sorting_algorithm,
-            "-o", output_path,
-            "--match_order", match_order,
-            "--axis_text_size", str(axis_text_size),
-            "--save_height", str(save_height),
-            "--save_width", str(save_width)
-        ]
-
-        if verbose: wompwomp_command.append("-v")
-        if dev_mode: wompwomp_command.append("--dev")
-        if auto_adjust_text: wompwomp_command.append("--auto_adjust_text")
-
-        print(f"Running command: {' '.join(wompwomp_command)}")
-        subprocess.run(wompwomp_command, check=True)
-        print(f"Plot saved successfully to {output_path}")
-
-    finally:
-        # --- Part 3: Clean up the temporary file ---
-        if temp_file_path and os.path.exists(temp_file_path):
-            print(f"Cleaning up temporary file: {temp_file_path}")
-            os.remove(temp_file_path)
-'''

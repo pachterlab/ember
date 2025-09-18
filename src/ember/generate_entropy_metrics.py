@@ -12,7 +12,6 @@ from scipy.sparse import csr_matrix, lil_matrix
 
 def safe_log2_sparse(mat):
     """
-    
     Helper function applies an element-wise log2 transform only to the non-zero
     *stored* entries in a SciPy CSR sparse matrix. Zeros in a sparse matrix are
     implicit (not stored in `.data`) and remain zero in the output.
@@ -20,15 +19,6 @@ def safe_log2_sparse(mat):
     Any non-finite results from the log transform (e.g., `-inf` from explicit
     stored zeros, or `NaN` from negative values) are replaced with 0.
     Parameters
-    ----------
-    mat : scipy.sparse.csr_matrix
-        Input sparse matrix to be log2-transformed.
-
-    Returns
-    -------
-    scipy.sparse.csr_matrix
-        Sparse matrix of the same shape with log2-transformed data.
-        Any NaN or infinite values are replaced with 0.
     """
     log_mat = mat.copy()
     log_mat.data = np.log2(log_mat.data)
@@ -49,18 +39,6 @@ def safe_divide_sparse(numerator, denominator):
     Dense case:
         - Division is performed with suppressed warnings.
         - Positions with zero denominator are set to 0.
-
-    Parameters
-    ----------
-    numerator : array-like or scipy.sparse.spmatrix
-        Matrix or sparse matrix to be divided.
-    denominator : array-like
-        Vector or array to divide by. Must be broadcast-compatible with numerator.
-
-    Returns
-    -------
-    array-like or scipy.sparse.spmatrix
-        Result of the element-wise division with safe handling of zero denominators.
     """
     if sparse.issparse(numerator):
         denom_safe = np.copy(denominator)
