@@ -6,6 +6,7 @@ import pandas as pd
 import seaborn as sns
 import anndata as ad
 import os
+import gc
 
 def _find_top_genes(df, n_top=15, method='sum', metric_cols=None, fdr_cols=None):
     """
@@ -371,7 +372,10 @@ def plot_sample_counts(
     adata_path = os.path.expanduser(h5ad_dir)
     if not os.path.exists(adata_path):
         raise FileNotFoundError(f"The file specified by `h5ad_dir` was not found at: {adata_path}")
-        
+    
+    #Read in adata in backed mode
+    adata = ad.read_h5ad(h5ad_dir, backed='r')
+    
     # Validate sample_id_col, category_col, and condition_col 
     required_params = {
         "sample_id_col": sample_id_col, 
@@ -405,19 +409,19 @@ def plot_sample_counts(
     # Customize the plot
     # Set labels and title
     plt.title(f'Number of Samples by {category_col} and {condition_col}', fontsize = fontsize+2)
-    plt.xlabel(category_col, fontsize)
-    plt.ylabel('Count', fontsize)
-    plt.legend(title=condition_col.title(), fontsize = fontsize-2)
+    plt.xlabel(category_col, fontsize = fontsize)
+    plt.ylabel('Count', fontsize = fontsize)
+    plt.legend(title=condition_col.title(), fontsize = fontsize-2, title_fontsize= fontsize)
 
 
     unique_categories = counts['category'].nunique()
         
-    plt.xticks(ticks=range(unique_categories), labels=adata.obs[category_col].unique().astype(str))
+    plt.xticks(ticks=range(unique_categories), labels=adata.obs[category_col].unique().astype(str), fontsize=fontsize)
 
     # Set y-axis ticks for clarity
     max_count = counts['count'].max()
     plt.ylim(0, max_count + 1)
-    plt.yticks(range(int(max_count) + 2))
+    plt.yticks(range(int(max_count) + 2), fontsize=fontsize)
 
     plt.tight_layout()
     
@@ -522,7 +526,8 @@ def plot_psi_blocks(
     plt.title(f'Mean $\psi$_block values for {gene_name} in {partition_label}', fontsize=fontsize+2)
     plt.xlabel('Block', fontsize=fontsize)
     plt.ylabel(r'$\psi_{block}$', fontsize=fontsize)
-    plt.xticks(rotation=45, ha='right')
+    plt.xticks(rotation=45, ha='right', fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
     plt.grid(axis='x')
     
     # Set the y-axis limits to be between 0 and 1

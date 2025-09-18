@@ -226,79 +226,82 @@ def light_ember(
 
         
 
-    #Validate h5ad_dir
-    adata_path = os.path.expanduser(h5ad_dir)
-    if not os.path.exists(adata_path):
-        raise FileNotFoundError(f"The file specified by `h5ad_dir` was not found at: {adata_path}")
-        
-    print(f'Loading AnnData object from {adata_path} in backed mode.')
-    adata = ad.read_h5ad(h5ad_dir, backed = 'r')
+    try:
+        #Validate h5ad_dir
+        adata_path = os.path.expanduser(h5ad_dir)
+        if not os.path.exists(adata_path):
+            raise FileNotFoundError(f"The file specified by `h5ad_dir` was not found at: {adata_path}")
 
-    #Validate partition_label
-    if partition_label not in adata.obs.columns:
-        raise ValueError(
-            f"partition_label '{partition_label}' not found in adata.obs columns. "
-            f"Available columns: {list(adata.obs.columns)}"
-        )
+        print(f'Loading AnnData object from {adata_path} in backed mode.')
+        adata = ad.read_h5ad(h5ad_dir, backed = 'r')
+
+        #Validate partition_label
+        if partition_label not in adata.obs.columns:
+            raise ValueError(
+                f"partition_label '{partition_label}' not found in adata.obs columns. "
+                f"Available columns: {list(adata.obs.columns)}"
+            )
+
+        # Validate sample_id_col, category_col, and condition_col if sampling or p-value calculation is enabled.
+        if sampling or partition_pvals or block_pvals:
+
+            # Check that all required parameter variables were passed to the function.
+            required_params = {
+                "sample_id_col": sample_id_col, 
+                "category_col": category_col, 
+                "condition_col": condition_col
+            }
+            if not all(required_params.values()):
+                missing_params = [name for name, value in required_params.items() if not value]
+                raise ValueError(
+                    f"If sampling or generating p-values, you must provide `sample_id_col`, `category_col`, and `condition_col`. "
+                    f"You are missing the following parameter(s): {missing_params}"
+                )
+
+            # Check if required column names exist in adata.obs.
+            required_cols = list(required_params.values())
+            missing_cols = [col for col in required_cols if col not in adata.obs.columns]
+
+            if missing_cols:
+                raise ValueError(
+                    f"The following required column(s) were not found in adata.obs: {missing_cols}. "
+                    f"\nAvailable columns are: {list(adata.obs.columns)}"
+                )
+
+        # Override sampling = False if pvals are true.         
+        if (partition_pvals or block_pvals) and not sampling:
+            print("\np-value generation requires sampling. sampling=False overriden")
+            sampling = True
+
+
+        # Validate block_pvals requirements
+        if block_pvals:
+            if not all([block_label]):
+                raise ValueError(
+                    "If `block_pvals=True`, you must provide `block_label`."
+                )
+
+            valid_blocks = adata.obs[partition_label].unique()
+            if block_label not in valid_blocks:
+                raise ValueError(
+                    f"block_label '{block_label}' not found in adata.obs['{partition_label}']. "
+                    f"Available block labels: {list(valid_blocks)}"
+            )
+        #If not block pvals is disabled, forcibly set block_lable to None to ensure correct calculation by generate_pvals
+        elif not block_pvals:
+            block_label = None
     
-    # Validate sample_id_col, category_col, and condition_col if sampling or p-value calculation is enabled.
-    if sampling or partition_pvals or block_pvals:
-
-        # Check that all required parameter variables were passed to the function.
-        required_params = {
-            "sample_id_col": sample_id_col, 
-            "category_col": category_col, 
-            "condition_col": condition_col
-        }
-        if not all(required_params.values()):
-            missing_params = [name for name, value in required_params.items() if not value]
-            raise ValueError(
-                f"If sampling or generating p-values, you must provide `sample_id_col`, `category_col`, and `condition_col`. "
-                f"You are missing the following parameter(s): {missing_params}"
+        if sampling:
+            # Generate balanced sets
+            sets, usage = generate_balanced_draws(
+                adata, sample_id_col, category_col, condition_col, num_draws=num_draws, seed = seed
             )
-
-        # Check if required column names exist in adata.obs.
-        required_cols = list(required_params.values())
-        missing_cols = [col for col in required_cols if col not in adata.obs.columns]
-
-        if missing_cols:
-            raise ValueError(
-                f"The following required column(s) were not found in adata.obs: {missing_cols}. "
-                f"\nAvailable columns are: {list(adata.obs.columns)}"
-            )
-            
-    # Override sampling = False if pvals are true.         
-    if (partition_pvals or block_pvals) and not sampling:
-        print("\np-value generation requires sampling. sampling=False overriden")
-        sampling = True
-
-
-    # Validate block_pvals requirements
-    if block_pvals:
-        if not all([block_label]):
-            raise ValueError(
-                "If `block_pvals=True`, you must provide `block_label`."
-            )
-
-        valid_blocks = adata.obs[partition_label].unique()
-        if block_label not in valid_blocks:
-            raise ValueError(
-                f"block_label '{block_label}' not found in adata.obs['{partition_label}']. "
-                f"Available block labels: {list(valid_blocks)}"
-        )
-    #If not block pvals is disabled, forcibly set block_lable to None to ensure correct calculation by generate_pvals
-    elif not block_pvals:
-        block_label = None
-    
-    if sampling:
-        # Generate balanced sets
-        sets, usage = generate_balanced_draws(
-            adata, sample_id_col, category_col, condition_col, num_draws=num_draws, seed = seed
-        )
-        print(f'\nGenerating entropy metrics.')
+            print(f'\nGenerating entropy metrics.')
+    finally:
         del(adata)
         gc.collect()
         
+    if sampling:
         if save_draws:
             #Save draws to folder named "balanced_draws" in save_dir
             temp_dir = os.path.join(save_dir, "balanced_draws")
@@ -308,7 +311,7 @@ def light_ember(
             # Temporary directory
             temp_dir = mkdtemp(prefix="ember_balanced_")
             print(f'\nTemp files location: {temp_dir}.')
-            
+
         try:
 
             # Create the generator that will produce the arguments for each task
@@ -326,8 +329,8 @@ def light_ember(
             with multiprocessing.Pool(processes=n_cpus) as pool:
                 for result in tqdm(pool.imap_unordered(_worker_wrapper, task_generator), total=len(sets)):
                     results.append(result)
-            
- 
+
+
             # ========== Aggregation Phase ==========
             save_dir = os.path.expanduser(save_dir)
             os.makedirs(save_dir, exist_ok=True)
@@ -409,7 +412,7 @@ def light_ember(
                                        Psi_block_df_real = mean_Psi_block, 
                                        Zeta_real = aggregate_entropy_df[f"Zeta_mean_{partition_label}"] )
 
-            
+
         finally:
             if not save_draws:
                 shutil.rmtree(temp_dir, ignore_errors=True)
@@ -437,7 +440,7 @@ def light_ember(
                                            f"Psi_block_unsampled_{partition_label}.csv"))
 
         print(f'\nSaved all unsampled entropy metrics to {os.path.join(save_dir, f"entropy_metrics_unsampled_{partition_label}.csv")}')
-        
+
 
     print('\nember run complete')
             

@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ember = "ember.cli:main"
+ember = "ember.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ember"]

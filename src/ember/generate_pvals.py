@@ -243,7 +243,7 @@ def generate_pvals(
     #Override entropy_metrics_dir if required arguments are provided. 
     #Functionality for intergration with light_ember
     
-    if any(v is not None for v in (Psi_real, Psi_block_df_real, Zeta_real)):
+    if any(v is None for v in (Psi_real, Psi_block_df_real, Zeta_real)):
         entropy_metrics_dir = os.path.expanduser(entropy_metrics_dir)
         all_entropy_metrics = pd.read_csv(os.path.join(entropy_metrics_dir, 
                                                    f"entropy_metrics_{partition_label}.csv"), 

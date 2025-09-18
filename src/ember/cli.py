@@ -4,8 +4,8 @@ from .light_ember import light_ember
 from .generate_pvals import generate_pvals
 from .plots import plot_partition_specificity, plot_block_specificity, plot_sample_counts, plot_psi_blocks
 
-def main():
-    """Main CLI entry point for the ember toolkit."""
+def create_parser():
+    """Creates and returns the ArgumentParser object for the ember toolkit."""
     parser = argparse.ArgumentParser(
         prog="ember",
         description="A command-line toolkit for ember: Entropy Metrics for Biological ExploRation."
@@ -13,15 +13,15 @@ def main():
     
     subparsers = parser.add_subparsers(dest="command", required=True, help="Available sub-commands")
 
-    
     # =================================================================
-    # ==                 COMMAND 1: light_ember                      ==
+    # ==                      COMMAND 1: light_ember                   ==
     # =================================================================
+
     light_ember_parser = subparsers.add_parser(
-    "light_ember",
-    help="Runs the ember entropy metrics and p-value generation workflow on an AnnData object.",
-    formatter_class=argparse.RawTextHelpFormatter,
-    description="""\
+        "light_ember",
+        help="Runs the ember entropy metrics and p-value generation workflow on an AnnData object.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
     Runs the ember entropy metrics and p-value generation workflow on an AnnData object.
 
     This function loads an AnnData `.h5ad` file, optionally performs balanced sampling
@@ -33,14 +33,18 @@ def main():
         - Psi_block : Specificity of information to a block
         - Zeta : Specificity to a partition / distance of Psi_blocks distribution from uniform
 
-    Notes
-    -----
+    Notes:
+    
     - Results are saved to `save_dir` as CSV files.
     - One CSV file with all entropy metrics.
     - One CSV file in a new Psi_block_df folder with Psi_block values for all blocks in a partition.
     - Separate file for p-values.
     - Separate files for each partition.
     - Alternate file names depending on sampling on or off.
+    """, 
+        epilog="""\
+    Example:
+      ember light_ember ~/ember_test/test_adata_cwc22.h5ad Genotype ~/ember_test/ --sample_id_col Mouse_ID --category_col Genotype --condition_col Sex --num_draws 50 --no_partition_pvals --n_cpus 4
     """
     )
 
@@ -146,21 +150,24 @@ def main():
              "Performance is I/O-bound and may not improve beyond 4–8 cores."
     )
 
-
     # =================================================================
-    # ==                 COMMAND 2: generate_pvals                   ==
+    # ==                    COMMAND 2: generate_pvals                  ==
     # =================================================================
     generate_pvals_parser = subparsers.add_parser(
-    "generate_pvals",
-    help="Calculate empirical p-values for entropy metrics from permutation test results.",
-    formatter_class=argparse.RawTextHelpFormatter,
-    description="""\
+        "generate_pvals",
+        help="Calculate empirical p-values for entropy metrics from permutation test results.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
     Calculate empirical p-values for entropy metrics from permutation test results.
 
     Entropy metrics generated:
         - Psi : Fraction of information explained by partition of choice
         - Psi_block : Specificity of information to a block
         - Zeta : Specificity to a partition / distance of Psi_blocks distribution from uniform
+    """, 
+        epilog="""\
+    Example:
+      ember generate_pvals test_adata_cwc22.h5ad Genotype ~/ember_test/ ~/ember_test/output Mouse_ID Genotype Sex --block_label WSBJ --n_cpus 4
     """
     )
 
@@ -185,27 +192,19 @@ def main():
         help="Path to directory where results will be saved."
     )
 
-    # --- Sampling Arguments ---
-    sampling_group = generate_pvals_parser.add_argument_group('Sampling Parameters')
-    sampling_group.add_argument(
-        "--sample_id_col",
-        type=str,
-        default=None,
+    generate_pvals_parser.add_argument(
+        "sample_id_col",
         help="Column in `.obs` with unique identifiers for each sample or replicate "
              "(e.g., 'sample_id', 'mouse_id')."
     )
-    sampling_group.add_argument(
-        "--category_col",
-        type=str,
-        default=None,
+    generate_pvals_parser.add_argument(
+        "category_col",
         help="Column in `.obs` defining the primary group to balance across "
              "(e.g., 'disease_status', 'mouse_strain'). Interchangeable with condition_col. "
              "For >2 variables, create interaction terms by concatenating columns with `:`."
     )
-    sampling_group.add_argument(
-        "--condition_col",
-        type=str,
-        required=True,
+    generate_pvals_parser.add_argument(
+        "condition_col",
         help="Column in `.obs` containing the conditions to balance within each category "
              "(e.g., 'sex', 'treatment'). Interchangeable with category_col. Supports interaction terms."
     )
@@ -262,23 +261,25 @@ def main():
         default=None,
         help="Observed Zeta values for each gene (pd.Series). Not required for user runs."
     )
-
     
-
     # =================================================================
-    # ==          COMMAND 3: plot_partition_specificity            ==
+    # ==              COMMAND 3: plot_partition_specificity          ==
     # =================================================================
     plot_partition_specificity_parser = subparsers.add_parser(
-    "plot_partition_specificity",
-    help="Generate a Zeta vs. Psi scatter plot to visualize partition-specific genes.",
-    formatter_class=argparse.RawTextHelpFormatter,
-    description="""\
+        "plot_partition_specificity",
+        help="Generate a Zeta vs. Psi scatter plot to visualize partition-specific genes.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
     Generate a Zeta vs. Psi scatter plot to visualize partition-specific genes.
 
     This function reads p-value data, colors genes based on their statistical
     significance for Psi and Zeta scores, and highlights top "marker" and
     "housekeeping" genes. Allows for custom highlighting of a user-provided
     gene list. Font size and color palette can be customized.
+    """, 
+        epilog="""\
+    Example:
+      ember plot_partition_specificity Genotype pvals_entropy_metrics_Genotype_WSBJ.csv output/ --highlight_genes Cwc22 --fontsize 25 
     """
     )
 
@@ -320,23 +321,28 @@ def main():
              "'significant by neither']. Default: None (uses built-in palette)."
     )
 
-
     # =================================================================
-    # ==            COMMAND 4: plot_block_specificity              ==
+    # ==                COMMAND 4: plot_block_specificity            ==
     # =================================================================
     plot_block_specificity_parser = subparsers.add_parser(
-    "plot_block_specificity",
-    help="Generate a psi_block vs. Psi scatter plot to visualize block-specific genes.",
-    formatter_class=argparse.RawTextHelpFormatter,
-    description="""\
+        "plot_block_specificity",
+        help="Generate a psi_block vs. Psi scatter plot to visualize block-specific genes.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
     Generate a psi_block vs. Psi scatter plot to visualize block-specific genes.
 
     This function reads p-value data, colors genes based on their statistical
     significance for Psi and psi_block scores, and highlights the top genes
     significant in both metrics. Allows for custom highlighting of a user-provided
     gene list. Font size and color palette can be customized.
+    """, 
+        epilog="""\
+    Example:
+      ember plot_block_specificity Genotype WSBJ pvals_entropy_metrics_Genotype_WSBJ.csv output/ --highlight_genes Cwc22 --fontsize 25 
     """
     )
+    
+    
 
     # --- Required Positional Arguments ---
     plot_block_specificity_parser.add_argument(
@@ -380,21 +386,24 @@ def main():
              "'significant by neither']. Default: None (uses built-in palette)."
     )
 
-
     # =================================================================
-    # ==               COMMAND 5: plot_sample_counts                 ==
+    # ==                  COMMAND 5: plot_sample_counts              ==
     # =================================================================
     plot_sample_counts_parser = subparsers.add_parser(
-    "plot_sample_counts",
-    help="Generate a bar plot showing the number of unique individuals per category and condition.",
-    formatter_class=argparse.RawTextHelpFormatter,
-    description="""\
+        "plot_sample_counts",
+        help="Generate a bar plot showing the number of unique individuals per category and condition.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
     Generate a bar plot showing the number of unique individuals per category and condition.
 
     This function reads an AnnData object from an .h5ad file in backed mode, 
     calculates the number of unique individuals for each combination of a given 
     category and condition, and visualizes these counts as a grouped bar plot.
     Font size can be customized.
+    """, 
+        epilog="""\
+    Example:
+      ember plot_sample_counts test_adata_cwc22.h5ad ~/ember_test/output Mouse_ID Genotype Sex --fontsize 20
     """
     )
 
@@ -428,21 +437,25 @@ def main():
         help="Base font size for plot labels and text (default: 18)."
     )
 
-
     # =================================================================
-    # ==                 COMMAND 6: plot_psi_blocks                  ==
+    # ==                    COMMAND 6: plot_psi_blocks               ==
     # =================================================================
     plot_psi_blocks_parser = subparsers.add_parser(
-    "plot_psi_blocks",
-    help="Generate a bar plot of mean psi block values with error bars for a given gene.",
-    formatter_class=argparse.RawTextHelpFormatter,
-    description="""\
+        "plot_psi_blocks",
+        help="Generate a bar plot of mean psi block values with error bars for a given gene.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
     Generates and saves a bar plot of mean psi block values with error bars.
 
     This function reads two CSV files from a specified directory: one for mean
     psi block values and one for standard deviations. It plots the mean values
     for a specific gene as a bar plot with corresponding standard deviation
     error bars. Font size can be customized.
+    """,
+        
+        epilog="""\
+    Example:
+      ember plot_psi_blocks Cwc22 Genotype ~/ember_test/output/Psi_block_df/ ~/ember_test/output/figs --fontsize 30
     """
     )
 
@@ -473,35 +486,43 @@ def main():
         default=18,
         help="Base font size for plot labels and text (default: 18)."
     )
+    
+    return parser
 
-
-    # =================================================================
-    # ==                  DISPATCH LOGIC (Call functions)            ==
-    # =================================================================
-    args = parser.parse_args()
-
+def run_command(parser, args):
+    """Takes a parser instance and parsed args, then executes the correct command."""
     kwargs = vars(args)
-    command_to_run = kwargs.pop('command')
+    command_to_run = kwargs.pop('command', None)
 
+    # A mapping of command names to their corresponding functions
+    command_map = {
+        "light_ember": light_ember,
+        "generate_pvals": generate_pvals,
+        "plot_partition_specificity": plot_partition_specificity,
+        "plot_block_specificity": plot_block_specificity,
+        "plot_sample_counts": plot_sample_counts,
+        "plot_psi_blocks": plot_psi_blocks,
+    }
 
-    if command_to_run == "light_ember":
-        light_ember(**kwargs)
+    # Get the function to execute based on the command
+    func_to_run = command_map.get(command_to_run)
 
-    elif command_to_run == "generate_pvals":
-        generate_pvals(**kwargs)
+    if func_to_run:
+        # Call the selected function with the remaining arguments
+        func_to_run(**kwargs)
+    else:
+        # If no command was provided or it's unknown, print help and exit
+        print(f"Error: Unknown command '{command_to_run}'", file=sys.stderr)
+        parser.print_help()
+        sys.exit(1)
 
-    elif command_to_run == "plot_partition_specificity":
-        plot_partition_specificity(**kwargs)
-
-    elif command_to_run == "plot_block_specificity":
-        plot_block_specificity(**kwargs)
-
-    elif command_to_run == "plot_sample_counts":
-        plot_sample_counts(**kwargs)
-
-    elif command_to_run == "plot_psi_blocks":
-        plot_psi_blocks(**kwargs)
-
-
+# This block ensures that the following code only runs when the script is
+# executed directly from the command line (e.g., `python your_script.py ...`).
+# It will NOT run when the script is imported by another module, like Sphinx.
 if __name__ == "__main__":
-    main()
+    # 1. Define the parser
+    parser = create_parser()
+    # 2. Parse the command-line arguments
+    args = parser.parse_args()
+    # 3. Run the appropriate command
+    run_command(parser, args)
