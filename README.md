@@ -27,11 +27,13 @@ from ember.light_ember import light_ember
 from ember.generate_pvals import generate_pvals
 from ember.plots import plot_partition_specificity, plot_block_specificity, plot_sample_counts, plot_psi_blocks
 ````
-
-Run in command line
+Run in commandline
 ```bash
-An example workflow in commandline
+ember --help
+````
 
+An example workflow in commandline
+```bash
 #Run full workflow with 4 cores to find genes that are specific to Genotype in a given dataset
 ember light_ember test_adata_cwc22.h5ad Genotype ~/output/ --sample_id_col Mouse_ID --category_col Genotype --condition_col Sex --n_cpus 4
 
