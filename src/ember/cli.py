@@ -494,7 +494,6 @@ def run_command(parser, args):
     kwargs = vars(args)
     command_to_run = kwargs.pop('command', None)
 
-    # A mapping of command names to their corresponding functions
     command_map = {
         "light_ember": light_ember,
         "generate_pvals": generate_pvals,
@@ -504,11 +503,9 @@ def run_command(parser, args):
         "plot_psi_blocks": plot_psi_blocks,
     }
 
-    # Get the function to execute based on the command
     func_to_run = command_map.get(command_to_run)
 
     if func_to_run:
-        # Call the selected function with the remaining arguments
         func_to_run(**kwargs)
     else:
         # If no command was provided or it's unknown, print help and exit
@@ -516,13 +513,7 @@ def run_command(parser, args):
         parser.print_help()
         sys.exit(1)
 
-# This block ensures that the following code only runs when the script is
-# executed directly from the command line (e.g., `python your_script.py ...`).
-# It will NOT run when the script is imported by another module, like Sphinx.
 if __name__ == "__main__":
-    # 1. Define the parser
     parser = create_parser()
-    # 2. Parse the command-line arguments
     args = parser.parse_args()
-    # 3. Run the appropriate command
     run_command(parser, args)
