@@ -62,5 +62,5 @@ For more detailed information, refer to the [official documentation](./assets/em
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE).
+This project is licensed under the [BSD-2 License](./LICENSE).
 
