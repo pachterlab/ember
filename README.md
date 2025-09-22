@@ -13,6 +13,13 @@ You can install the package from github using pip:
 ```bash
 pip install git+https://github.com/pachterlab/ember.git
 ````
+We reccommned using ember in a fresh conda environment to avoid depnendency issues:
+
+```bash
+conda create -n ember_env python=3.10
+conda activate ember_env
+pip install git+https://github.com/pachterlab/ember.git
+````
 
 Import in python/Jupyter
 
