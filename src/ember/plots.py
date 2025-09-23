@@ -73,7 +73,9 @@ def plot_partition_specificity(partition_label,
 
     This function reads p-value data, colors genes based on their statistical
     significance for Psi and Zeta scores, and highlights top "marker" and
-    "housekeeping" genes. 
+    "housekeeping" genes. Only interpret genes that are significant by both Psi
+    and Zeta since those are genes that have reliable scores after permutation 
+    testing. 
     Allows for custom highlighting of a user-provided gene list.
     Fontsize and color pallette can be customized. 
 
@@ -210,7 +212,9 @@ def plot_block_specificity(partition_label,
 
     This function reads p-value data, colors genes based on their statistical
     significance for Psi and psi_block scores, and highlights the top genes
-    significant in both metrics. 
+    significant in both metrics. Only interpret genes that are significant by both Psi
+    and psi_block since those are genes that have reliable scores after permutation 
+    testing. 
     Allows for custom highlighting of a user-provided gene list.
     Fontsize and color pallette can be customized. 
 
