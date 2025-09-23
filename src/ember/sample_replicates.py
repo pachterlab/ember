@@ -96,7 +96,8 @@ def generate_balanced_draws(adata, sample_id_col, category_col, condition_col, n
 # Function to combine sampled values
 def aitchison_mean_and_std(Psi_block_dfs_list):
     """
-    Compute the Aitchison mean of compositional DataFrames along with standard deviation.
+    Compute the Aitchison mean and geometric standard deviation of compositional 
+    DataFrames across blocks.
 
     Parameters
     ----------
@@ -108,28 +109,24 @@ def aitchison_mean_and_std(Psi_block_dfs_list):
     mean_df : pd.DataFrame
         Aitchison mean of Psi block values.
     var_df : pd.DataFrame
-        Std of the Psi block values.
+        geometric std of the Psi block values.
     """
     epsilon = 1e-10
     gene_names = Psi_block_dfs_list[0].index
-    strain_names = Psi_block_dfs_list[0].columns
+    block_names = Psi_block_dfs_list[0].columns
 
-    # === Aitchison mean ===
-    data_stack = np.stack([df.values for df in Psi_block_dfs_list], axis=0) + epsilon
-    gmean_data = stats.gmean(data_stack, axis=0)
-    gmean_df = pd.DataFrame(gmean_data, index=gene_names, columns=strain_names)
-    row_sums = gmean_df.sum(axis=1).replace(0, np.nan)
-    normalized_df = gmean_df.div(row_sums, axis=0).fillna(0)
+    with np.errstate(divide='ignore'):
+        # === Aitchison mean ===
+        data_stack = np.stack([df.values for df in Psi_block_dfs_list], axis=0) + epsilon
+        gmean_data = stats.gmean(data_stack, axis=0)
+        gmean_df = pd.DataFrame(gmean_data, index=gene_names, columns=block_names)
+        row_sums = gmean_df.sum(axis=1).replace(0, np.nan)
+        normalized_df = gmean_df.div(row_sums, axis=0).fillna(0)
 
-    # === STD ===
-    normalized_list = []
-    for df in Psi_block_dfs_list:
-        norm_df = df.div(df.sum(axis=1), axis=0).fillna(0)
-        normalized_list.append(norm_df.values)
+        # === Geometric std ===
+        log_data = np.log(np.where(data_stack > 0, data_stack, epsilon))
+        log_std = np.std(log_data, axis=0, ddof=1)
+        gsd_data = np.exp(log_std)
+        gsd_df = pd.DataFrame(gsd_data, index=gene_names, columns=block_names)
 
-    norm_stack = np.stack(normalized_list, axis=0)
-    var_data = np.std(norm_stack, axis=0, ddof=1)
-   
-    var_df = pd.DataFrame(var_data, index=gene_names, columns=strain_names)
-
-    return normalized_df, var_df
+    return normalized_df, gsd_df
