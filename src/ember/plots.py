@@ -319,6 +319,7 @@ def plot_block_specificity(partition_label,
     ax.set_title(fr'$\psi_{{{block_label}}}$ vs $\Psi$ for {partition_label}', fontsize=fontsize + 3)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
+    ax.tick_params(axis='both', labelsize=fontsize - 2)
     ax.grid(True, linestyle='--', linewidth=0.5)
     fig.tight_layout(rect=[0, 0, 0.85, 1])
 
