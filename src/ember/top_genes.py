@@ -36,7 +36,7 @@ def highly_specific_to_partition(
     zeta_thresh : float, Required, default = 0.5
         Threshold for Zeta values. Only genes with Zeta > zeta_thresh are kept.
 
-    q_thresh : float, Required, default = 0.05
+    q_thresh : float, default = 0.05
         Threshold for q-values. Genes are retained if both
         'Psi q-value' <= q_thresh and 'Zeta q-value' <= q_thresh.
 
@@ -137,7 +137,7 @@ def highly_specific_to_block(
     psi_block_thresh : float, Required, default = 0.5
         Threshold for psi_block values. Only genes with psi_block > psi_block_thresh are kept.
 
-    q_thresh : float, Required, default = 0.05
+    q_thresh : float, float, default = 0.05
         Threshold for q-values. Genes are retained if both
         'Psi q-value' <= q_thresh and 'psi_block q-value' <= q_thresh.
 
@@ -232,10 +232,10 @@ def non_specific_to_partition(
     psi_thresh : float, default = 0.5
         Threshold for Psi values. Only genes with Psi > psi_thresh are kept.
 
-    zeta_thresh : float, Required, default = 0.5
+    zeta_thresh : float, default = 0.5
         Threshold for Zeta values. Only genes with Zeta < zeta_thresh are kept.
 
-    q_thresh : float, Required, default = 0.05
+    q_thresh : float, default = 0.05
         Threshold for q-values. Genes are retained if both
         'Psi q-value' <= q_thresh and 'Zeta q-value' <= q_thresh.
 

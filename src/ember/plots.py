@@ -65,6 +65,7 @@ def plot_partition_specificity(partition_label,
                                pvals_dir,
                                save_dir,
                                highlight_genes=None,
+                               q_thresh = 0.05,
                                fontsize=18,
                                custom_palette=None
                               ):
@@ -94,6 +95,10 @@ def plot_partition_specificity(partition_label,
     highlight_genes : list[str], default=None.
         A list of gene names to highlight and annotate on the plot, by default None.
         
+    q_thresh : float, float, default = 0.05
+        Threshold for q-values. Genes are retained if both
+        'Psi q-value' <= q_thresh and 'Zeta q-value' <= q_thresh.
+    
     fontsize : int, default=18.
         The base font size for plot labels and text, by default 18.
         
@@ -130,9 +135,9 @@ def plot_partition_specificity(partition_label,
     }
 
     conditions = [
-        (df_plot['Psi q-value'] < 0.05) & (df_plot['Zeta q-value'] < 0.05),
-        (df_plot['Psi q-value'] < 0.05),
-        (df_plot['Zeta q-value'] < 0.05)
+        (df_plot['Psi q-value'] < q_thresh) & (df_plot['Zeta q-value'] <q_thresh),
+        (df_plot['Psi q-value'] < q_thresh),
+        (df_plot['Zeta q-value'] < q_thresh)
     ]
     color_choices = [colors['both'], colors['psi'], colors['zeta']]
     df_plot['color'] = np.select(conditions, color_choices, default=colors['none'])
@@ -204,6 +209,7 @@ def plot_block_specificity(partition_label,
                              pvals_dir,
                              save_dir,
                              highlight_genes=None,
+                           q_thresh = 0.05,
                              fontsize=18,
                              custom_palette=None
                             ):
@@ -235,6 +241,10 @@ def plot_block_specificity(partition_label,
         
     highlight_genes : list[str], default=None.
         A list of gene names to highlight and annotate on the plot, by default None.
+        
+    q_thresh : float, float, default = 0.05
+        Threshold for q-values. Genes are retained if both
+        'Psi q-value' <= q_thresh and 'psi_block q-value' <= q_thresh.
         
     fontsize : int, default = 18. 
         The base font size for plot labels and text, by default 18.
@@ -272,9 +282,9 @@ def plot_block_specificity(partition_label,
     }
     
     conditions = [
-        (df_plot['Psi q-value'] < 0.05) & (df_plot['psi_block q-value'] < 0.05),
-        (df_plot['Psi q-value'] < 0.05),
-        (df_plot['psi_block q-value'] < 0.05)
+        (df_plot['Psi q-value'] < q_thresh) & (df_plot['psi_block q-value'] < q_thresh),
+        (df_plot['Psi q-value'] < q_thresh),
+        (df_plot['psi_block q-value'] < q_thresh)
     ]
     color_choices = [colors['both'], colors['psi'], colors['block']]
     df_plot['color'] = np.select(conditions, color_choices, default=colors['none'])
@@ -549,4 +559,6 @@ def plot_psi_blocks(
     print(f"Plot successfully saved to {out_path}")
 
     plt.show()
+    
+
     

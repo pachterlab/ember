@@ -306,6 +306,14 @@ def create_parser():
         default=None,
         help="List of gene names to highlight and annotate on the plot (default: None)."
     )
+    
+    plot_partition_specificity_parser.add_argument(
+        "--q_thresh",
+        type=float,
+        default=0.05,
+        help="Threshold for q-values ('Psi q-value' and 'Zeta q-value'). Must be <= q_thresh (default: 0.05)."
+    )
+    
     plot_partition_specificity_parser.add_argument(
         "--fontsize",
         type=int,
@@ -371,6 +379,14 @@ def create_parser():
         default=None,
         help="List of gene names to highlight and annotate on the plot (default: None)."
     )
+        
+    plot_block_specificity_parser.add_argument(
+        "--q_thresh",
+        type=float,
+        default=0.05,
+        help="Threshold for q-values ('Psi q-value' and 'psi_block q-value'). Must be <= q_thresh (default: 0.05)."
+    )
+        
     plot_block_specificity_parser.add_argument(
         "--fontsize",
         type=int,
