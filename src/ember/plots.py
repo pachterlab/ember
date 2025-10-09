@@ -85,7 +85,7 @@ def plot_partition_specificity(partition_label,
         The label for the partition being plotted, used in the plot title.
         
     pvals_dir : str, Required.
-        Path to the input CSV file containing p-values and scores (Psi, Zeta, FDRs).
+        Path to the input CSV file containing p-values and scores (Psi, Zeta, q-values).
         The CSV must have gene names as its index column.
         
     save_dir : str, Required.
@@ -121,7 +121,7 @@ def plot_partition_specificity(partition_label,
 
     pvals_dir = os.path.expanduser(pvals_dir)
     pvals = pd.read_csv(pvals_dir, index_col=0)
-    df_plot = pvals[['Psi', 'Psi FDR', 'Zeta', 'Zeta FDR']].copy()
+    df_plot = pvals[['Psi', 'Psi q-value', 'Zeta', 'Zeta q-value']].copy()
     
     colors = {
         'psi': custom_palette[0], 'zeta': custom_palette[1], 'highlight': custom_palette[2],
@@ -130,9 +130,9 @@ def plot_partition_specificity(partition_label,
     }
 
     conditions = [
-        (df_plot['Psi FDR'] < 0.05) & (df_plot['Zeta FDR'] < 0.05),
-        (df_plot['Psi FDR'] < 0.05),
-        (df_plot['Zeta FDR'] < 0.05)
+        (df_plot['Psi q-value'] < 0.05) & (df_plot['Zeta q-value'] < 0.05),
+        (df_plot['Psi q-value'] < 0.05),
+        (df_plot['Zeta q-value'] < 0.05)
     ]
     color_choices = [colors['both'], colors['psi'], colors['zeta']]
     df_plot['color'] = np.select(conditions, color_choices, default=colors['none'])
@@ -145,8 +145,8 @@ def plot_partition_specificity(partition_label,
         ax.scatter(subset['Psi'], subset['Zeta'], color=color, alpha=0.6, zorder=1 if color == colors['none'] else 2)
 
     # Gene highlighting and annotation
-    top_markers = _find_top_genes(df_plot, method='sum', metric_cols=['Psi', 'Zeta'], fdr_cols=['Psi FDR', 'Zeta FDR'])
-    top_housekeepers = _find_top_genes(df_plot, method='difference', metric_cols=['Psi', 'Zeta'], fdr_cols=['Psi FDR', 'Zeta FDR'])
+    top_markers = _find_top_genes(df_plot, method='sum', metric_cols=['Psi', 'Zeta'], fdr_cols=['Psi q-value', 'Zeta q-value'])
+    top_housekeepers = _find_top_genes(df_plot, method='difference', metric_cols=['Psi', 'Zeta'], fdr_cols=['Psi q-value', 'Zeta q-value'])
 
     _annotate_genes(ax, df_plot, top_markers, 'Psi', 'Zeta', colors['marker'],
                     scatter_kwargs={'s': 120, 'linewidths': 1.5, 'zorder': 4})
@@ -264,7 +264,7 @@ def plot_block_specificity(partition_label,
     # Setup
     pvals_dir = os.path.expanduser(pvals_dir)
     pvals = pd.read_csv(pvals_dir, index_col=0)
-    df_plot = pvals[['Psi', 'Psi FDR', 'psi_block', 'psi_block FDR']].copy()
+    df_plot = pvals[['Psi', 'Psi q-value', 'psi_block', 'psi_block q-value']].copy()
 
     colors = {
         'psi': custom_palette[0], 'block': custom_palette[1], 'highlight': custom_palette[2],
@@ -272,9 +272,9 @@ def plot_block_specificity(partition_label,
     }
     
     conditions = [
-        (df_plot['Psi FDR'] < 0.05) & (df_plot['psi_block FDR'] < 0.05),
-        (df_plot['Psi FDR'] < 0.05),
-        (df_plot['psi_block FDR'] < 0.05)
+        (df_plot['Psi q-value'] < 0.05) & (df_plot['psi_block q-value'] < 0.05),
+        (df_plot['Psi q-value'] < 0.05),
+        (df_plot['psi_block q-value'] < 0.05)
     ]
     color_choices = [colors['both'], colors['psi'], colors['block']]
     df_plot['color'] = np.select(conditions, color_choices, default=colors['none'])
@@ -287,7 +287,7 @@ def plot_block_specificity(partition_label,
         ax.scatter(subset['Psi'], subset['psi_block'], color=color, alpha=0.6)
 
     # Gene highlighting and annotation ---
-    top_genes = _find_top_genes(df_plot, n_top=10, method='sum', metric_cols=['Psi', 'psi_block'], fdr_cols=['Psi FDR', 'psi_block FDR'])
+    top_genes = _find_top_genes(df_plot, n_top=10, method='sum', metric_cols=['Psi', 'psi_block'], fdr_cols=['Psi q-value', 'psi_block q-value'])
     
     _annotate_genes(ax, df_plot, top_genes, 'Psi', 'psi_block', colors['top_genes'],
                     scatter_kwargs={'s': 140, 'linewidths': 1.5, 'zorder': 4})

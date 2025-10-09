@@ -3,6 +3,7 @@ import sys
 from .light_ember import light_ember
 from .generate_pvals import generate_pvals
 from .plots import plot_partition_specificity, plot_block_specificity, plot_sample_counts, plot_psi_blocks
+from .top_genes import highly_specific_to_partition, highly_specific_to_block, non_specific_to_partition # New Import
 
 def create_parser():
     """Creates and returns the ArgumentParser object for the ember toolkit."""
@@ -14,7 +15,7 @@ def create_parser():
     subparsers = parser.add_subparsers(dest="command", required=True, help="Available sub-commands")
 
     # =================================================================
-    # ==                      COMMAND 1: light_ember                   ==
+    # ==                 COMMAND 1: light_ember                      ==
     # =================================================================
 
     light_ember_parser = subparsers.add_parser(
@@ -151,7 +152,7 @@ def create_parser():
     )
 
     # =================================================================
-    # ==                    COMMAND 2: generate_pvals                  ==
+    # ==                 COMMAND 2: generate_pvals                   ==
     # =================================================================
     generate_pvals_parser = subparsers.add_parser(
         "generate_pvals",
@@ -263,7 +264,7 @@ def create_parser():
     )
     
     # =================================================================
-    # ==              COMMAND 3: plot_partition_specificity          ==
+    # ==             COMMAND 3: plot_partition_specificity           ==
     # =================================================================
     plot_partition_specificity_parser = subparsers.add_parser(
         "plot_partition_specificity",
@@ -322,7 +323,7 @@ def create_parser():
     )
 
     # =================================================================
-    # ==                COMMAND 4: plot_block_specificity            ==
+    # ==              COMMAND 4: plot_block_specificity              ==
     # =================================================================
     plot_block_specificity_parser = subparsers.add_parser(
         "plot_block_specificity",
@@ -380,14 +381,14 @@ def create_parser():
         "--custom_palette",
         nargs="+",
         default=None,
-        help="List of 6 hex color codes to customize the color scheme. Order:\n"
+        help="List of 7 hex color codes to customize the color scheme. Order:\n"
              "['significant by psi', 'significant by psi_block', 'highlight genes', "
              "'significant by both', 'circle markers', 'circle housekeeping genes', "
              "'significant by neither']. Default: None (uses built-in palette)."
     )
 
     # =================================================================
-    # ==                  COMMAND 5: plot_sample_counts              ==
+    # ==               COMMAND 5: plot_sample_counts                 ==
     # =================================================================
     plot_sample_counts_parser = subparsers.add_parser(
         "plot_sample_counts",
@@ -438,7 +439,7 @@ def create_parser():
     )
 
     # =================================================================
-    # ==                    COMMAND 6: plot_psi_blocks               ==
+    # ==                COMMAND 6: plot_psi_blocks                   ==
     # =================================================================
     plot_psi_blocks_parser = subparsers.add_parser(
         "plot_psi_blocks",
@@ -487,6 +488,171 @@ def create_parser():
         help="Base font size for plot labels and text (default: 18)."
     )
     
+    # =================================================================
+    # ==            COMMAND 7: highly_specific_to_partition          ==
+    # =================================================================
+    highly_specific_parser = subparsers.add_parser(
+        "highly_specific_to_partition",
+        help="Identify genes that are highly significant and specific to the partition (high Psi and Zeta).",
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
+    Identifies significant and specific genes from an ember generated 
+    p-values/q-values CSV file based on thresholds for Psi, Zeta, and q-values.
+    The resulting DataFrame is saved as "highly_specific_genes_to_{partition_label}.csv".
+    """,
+        epilog="""\
+    Example:
+      ember highly_specific_to_partition Genotype pvals_entropy_metrics_Genotype.csv output/ --psi_thresh 0.6 --zeta_thresh 0.7
+    """
+    )
+
+    # --- Required Positional Arguments ---
+    highly_specific_parser.add_argument(
+        "partition_label",
+        help="Name of partition used to generate entropy metrics, used to label saved csv."
+    )
+    highly_specific_parser.add_argument(
+        "pvals_dir",
+        help="Path to the input CSV file (must contain 'Psi q-value', 'Zeta q-value', 'Psi', and 'Zeta')."
+    )
+    highly_specific_parser.add_argument(
+        "save_dir",
+        help="Directory where the filtered results CSV will be saved."
+    )
+
+    # --- Optional Threshold Arguments ---
+    thresh_group = highly_specific_parser.add_argument_group('Threshold Parameters')
+    thresh_group.add_argument(
+        "--psi_thresh",
+        type=float,
+        default=0.5,
+        help="Threshold for Psi values. Genes must have Psi > psi_thresh (default: 0.5)."
+    )
+    thresh_group.add_argument(
+        "--zeta_thresh",
+        type=float,
+        default=0.5,
+        help="Threshold for Zeta values. Genes must have Zeta > zeta_thresh (default: 0.5)."
+    )
+    thresh_group.add_argument(
+        "--q_thresh",
+        type=float,
+        default=0.05,
+        help="Threshold for q-values ('Psi q-value' and 'Zeta q-value'). Must be <= q_thresh (default: 0.05)."
+    )
+
+    # =================================================================
+    # ==             COMMAND 8: highly_specific_to_block             ==
+    # =================================================================
+    highly_specific_block_parser = subparsers.add_parser(
+        "highly_specific_to_block",
+        help="Identify genes that are highly significant and specific to a partition block (high Psi and psi_block).",
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
+    Identifies significant and specific genes from an ember generated 
+    p-values/q-values CSV file based on thresholds for Psi, psi_block, and q-values. 
+    REsultant genes are potential marker genes.  
+    The resulting DataFrame is saved as "highly_specific_genes_by_{partition_label}_{block_label}.csv".
+    """,
+        epilog="""\
+    Example:
+      ember highly_specific_to_block Genotype WSBJ pvals_entropy_metrics_Genotype_WSBJ.csv output/ --psi_thresh 0.6 --psi_block_thresh 0.7
+    """
+    )
+
+    # --- Required Positional Arguments ---
+    highly_specific_block_parser.add_argument(
+        "partition_label",
+        help="Name of partition used to generate entropy metrics."
+    )
+    highly_specific_block_parser.add_argument(
+        "block_label",
+        help="Name of block in partition used to generate entropy metrics."
+    )
+    highly_specific_block_parser.add_argument(
+        "pvals_dir",
+        help="Path to the input CSV file (must contain 'Psi q-value', 'psi_block q-value', 'Psi', and 'psi_block')."
+    )
+    highly_specific_block_parser.add_argument(
+        "save_dir",
+        help="Directory where the filtered results CSV will be saved."
+    )
+
+    # --- Optional Threshold Arguments ---
+    thresh_group_block = highly_specific_block_parser.add_argument_group('Threshold Parameters')
+    thresh_group_block.add_argument(
+        "--psi_thresh",
+        type=float,
+        default=0.5,
+        help="Threshold for Psi values. Genes must have Psi > psi_thresh (default: 0.5)."
+    )
+    thresh_group_block.add_argument(
+        "--psi_block_thresh",
+        type=float,
+        default=0.5,
+        help="Threshold for psi_block values. Genes must have psi_block > psi_block_thresh (default: 0.5)."
+    )
+    thresh_group_block.add_argument(
+        "--q_thresh",
+        type=float,
+        default=0.05,
+        help="Threshold for q-values ('Psi q-value' and 'psi_block q-value'). Must be <= q_thresh (default: 0.05)."
+    )
+
+    # =================================================================
+    # ==           COMMAND 9: non_specific_to_partition              ==
+    # =================================================================
+    non_specific_parser = subparsers.add_parser(
+        "non_specific_to_partition",
+        help="Identify genes that are highly significant but non-specific to the partition (high Psi, low Zeta).",
+        formatter_class=argparse.RawTextHelpFormatter,
+        description="""\
+    Identifies significant but non-specific genes (potential housekeeping genes) from an ember generated 
+    p-values/q-values CSV file based on thresholds for Psi, Zeta, and q-values.
+    Note: The Zeta filter is reversed, keeping Zeta < zeta_thresh.
+    The resulting DataFrame is saved as "non_specific_genes_to_{partition_label}.csv".
+    """,
+        epilog="""\
+    Example:
+      ember non_specific_to_partition Genotype pvals_entropy_metrics_Genotype.csv output/ --psi_thresh 0.6 --zeta_thresh 0.2
+    """
+    )
+
+    # --- Required Positional Arguments ---
+    non_specific_parser.add_argument(
+        "partition_label",
+        help="Name of partition used to generate entropy metrics, used to label saved csv."
+    )
+    non_specific_parser.add_argument(
+        "pvals_dir",
+        help="Path to the input CSV file (must contain 'Psi q-value', 'Zeta q-value', 'Psi', and 'Zeta')."
+    )
+    non_specific_parser.add_argument(
+        "save_dir",
+        help="Directory where the filtered results CSV will be saved."
+    )
+
+    # --- Optional Threshold Arguments ---
+    thresh_group_non = non_specific_parser.add_argument_group('Threshold Parameters')
+    thresh_group_non.add_argument(
+        "--psi_thresh",
+        type=float,
+        default=0.5,
+        help="Threshold for Psi values. Genes must have Psi > psi_thresh (default: 0.5)."
+    )
+    thresh_group_non.add_argument(
+        "--zeta_thresh",
+        type=float,
+        default=0.5,
+        help="Threshold for Zeta values. Genes must have Zeta < zeta_thresh (default: 0.5) to be considered non-specific."
+    )
+    thresh_group_non.add_argument(
+        "--q_thresh",
+        type=float,
+        default=0.05,
+        help="Threshold for q-values ('Psi q-value' and 'Zeta q-value'). Must be <= q_thresh (default: 0.05)."
+    )
+    
     return parser
 
 def run_command(parser, args):
@@ -501,6 +667,9 @@ def run_command(parser, args):
         "plot_block_specificity": plot_block_specificity,
         "plot_sample_counts": plot_sample_counts,
         "plot_psi_blocks": plot_psi_blocks,
+        "highly_specific_to_partition": highly_specific_to_partition, 
+        "highly_specific_to_block": highly_specific_to_block,         
+        "non_specific_to_partition": non_specific_to_partition,       
     }
 
     func_to_run = command_map.get(command_to_run)
