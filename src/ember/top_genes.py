@@ -264,9 +264,9 @@ def non_specific_to_partition(
         print(f"An error occurred while reading the CSV file: {e}")
         return pd.DataFrame()
 
-    # Filter for significant and specific genes
+    # Filter for significant and non-specific genes
     # Significant: q-values <= q_thresh
-    # Specific: Psi > psi_thresh and Zeta > zeta_thresh
+    # Non-specific: Psi > psi_thresh and Zeta < zeta_thresh
     try:
         significant = pvals[
             (pvals['Psi q-value'] <= q_thresh) &
@@ -278,7 +278,7 @@ def non_specific_to_partition(
         print(f"Error: Missing expected column in CSV file: {e}")
         return pd.DataFrame()
     
-    # Sort significant genes - highest to lowest specificty
+    # Sort significant genes - lowest to highest specificty
     significant = significant.sort_values(by = ['Zeta', 'Psi'], ascending = [True, False])
     
     # Save the filtered DataFrame to CSV
