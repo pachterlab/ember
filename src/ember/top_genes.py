@@ -272,7 +272,7 @@ def non_specific_to_partition(
             (pvals['Psi q-value'] <= q_thresh) &
             (pvals['Zeta q-value'] <= q_thresh) &
             (pvals['Psi'] > psi_thresh) &
-            (pvals['Zeta'] > zeta_thresh)
+            (pvals['Zeta'] < zeta_thresh)
         ]
     except KeyError as e:
         print(f"Error: Missing expected column in CSV file: {e}")
