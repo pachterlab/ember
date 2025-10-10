@@ -165,11 +165,11 @@ def plot_partition_specificity(partition_label,
                     text_kwargs=text_args)
 
     # Text boxes and legend
-    boxprops_marker = dict(boxstyle='round', facecolor='white', alpha=0.3, edgecolor=colors['marker'])
+    boxprops_marker = dict(boxstyle='round', facecolor='white', alpha=1, edgecolor=colors['marker'])
     ax.text(1.02, 0.95, 'Marker Genes:\n' + '\n'.join(top_markers), transform=ax.transAxes,
             fontsize=fontsize-4, bbox=boxprops_marker, va='top', ha='left')
 
-    boxprops_hk = dict(boxstyle='round', facecolor='white', alpha=0.3, edgecolor=colors['housekeeping'])
+    boxprops_hk = dict(boxstyle='round', facecolor='white', alpha=1, edgecolor=colors['housekeeping'])
     ax.text(1.02, 0.45, 'Housekeeping Genes:\n' + '\n'.join(top_housekeepers), transform=ax.transAxes,
             fontsize=fontsize-4, bbox=boxprops_hk, va='top', ha='left')
     
@@ -309,7 +309,7 @@ def plot_block_specificity(partition_label,
                     text_kwargs=text_args)
 
     # Text boxes and legend
-    boxprops = dict(boxstyle='round', facecolor='white', alpha=0.3, edgecolor=colors['top_genes'])
+    boxprops = dict(boxstyle='round', facecolor='white', alpha=1, edgecolor=colors['top_genes'])
     ax.text(1.02, 0.95, 'Top Genes:\n' + '\n'.join(top_genes), transform=ax.transAxes,
             fontsize=fontsize-4, bbox=boxprops, va='top', ha='left')
     
