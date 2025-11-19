@@ -11,14 +11,21 @@ For a hands on tutorial, check out this [collab notebook](https://colab.research
 You can install the package from github using pip:
 
 ```bash
+pip install ember-py==0.1.0
+````
+
+or 
+
+```bash
 pip install git+https://github.com/pachterlab/ember.git
 ````
+
 We reccommned using ember in a fresh conda environment to avoid depnendency issues:
 
 ```bash
 conda create -n ember_env python=3.10
 conda activate ember_env
-pip install git+https://github.com/pachterlab/ember.git
+pip install ember-py==0.1.0
 ````
 
 Import in python/Jupyter
