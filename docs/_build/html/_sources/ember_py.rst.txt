@@ -1,0 +1,69 @@
+ember\_py package
+=================
+
+Submodules
+----------
+
+ember\_py.cli module
+--------------------
+
+.. automodule:: ember_py.cli
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+ember\_py.generate\_entropy\_metrics module
+-------------------------------------------
+
+.. automodule:: ember_py.generate_entropy_metrics
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+ember\_py.generate\_pvals module
+--------------------------------
+
+.. automodule:: ember_py.generate_pvals
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+ember\_py.light\_ember module
+-----------------------------
+
+.. automodule:: ember_py.light_ember
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+ember\_py.plots module
+----------------------
+
+.. automodule:: ember_py.plots
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+ember\_py.sample\_replicates module
+-----------------------------------
+
+.. automodule:: ember_py.sample_replicates
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+ember\_py.top\_genes module
+---------------------------
+
+.. automodule:: ember_py.top_genes
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: ember_py
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -71,7 +71,7 @@ ember plot_sample_counts test_adata_cwc22.h5ad ~/output Mouse_ID Genotype Sex
 
 ## Documentation
 
-For more detailed information, refer to the [official documentation](./assets/ember_documentation.pdf).
+For more detailed information, refer to the [official documentation](./docs/_build/latex/ember_py.pdf).
 
 
 ## License

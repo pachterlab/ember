@@ -1,0 +1,56 @@
+\begin{sphinxtheindex}
+\let\bigletter\sphinxstyleindexlettergroup
+\let\spxpagem \sphinxstyleindexpagemain
+\let\spxentry \sphinxstyleindexentry
+\let\spxextra \sphinxstyleindexextra
+
+  \bigletter E
+  \item \spxentry{ember\_py}
+    \subitem \spxentry{module}, \hyperpage{11}
+  \item \spxentry{ember\_py.generate\_pvals}
+    \subitem \spxentry{module}, \hyperpage{6}
+  \item \spxentry{ember\_py.light\_ember}
+    \subitem \spxentry{module}, \hyperpage{3}
+  \item \spxentry{ember\_py.plots}
+    \subitem \spxentry{module}, \hyperpage{7}
+  \item \spxentry{ember\_py.top\_genes}
+    \subitem \spxentry{module}, \hyperpage{9}
+
+  \indexspace
+  \bigletter G
+  \item \spxentry{generate\_pvals()}\spxextra{in module ember\_py.generate\_pvals}, \hyperpage{6}
+
+  \indexspace
+  \bigletter H
+  \item \spxentry{highly\_specific\_to\_block()}\spxextra{in module ember\_py.top\_genes}, 
+		\hyperpage{9}
+  \item \spxentry{highly\_specific\_to\_partition()}\spxextra{in module ember\_py.top\_genes}, 
+		\hyperpage{10}
+
+  \indexspace
+  \bigletter L
+  \item \spxentry{light\_ember()}\spxextra{in module ember\_py.light\_ember}, \hyperpage{3}
+
+  \indexspace
+  \bigletter M
+  \item \spxentry{module}
+    \subitem \spxentry{ember\_py}, \hyperpage{11}
+    \subitem \spxentry{ember\_py.generate\_pvals}, \hyperpage{6}
+    \subitem \spxentry{ember\_py.light\_ember}, \hyperpage{3}
+    \subitem \spxentry{ember\_py.plots}, \hyperpage{7}
+    \subitem \spxentry{ember\_py.top\_genes}, \hyperpage{9}
+
+  \indexspace
+  \bigletter N
+  \item \spxentry{non\_specific\_to\_partition()}\spxextra{in module ember\_py.top\_genes}, 
+		\hyperpage{11}
+
+  \indexspace
+  \bigletter P
+  \item \spxentry{plot\_block\_specificity()}\spxextra{in module ember\_py.plots}, \hyperpage{7}
+  \item \spxentry{plot\_partition\_specificity()}\spxextra{in module ember\_py.plots}, 
+		\hyperpage{8}
+  \item \spxentry{plot\_psi\_blocks()}\spxextra{in module ember\_py.plots}, \hyperpage{8}
+  \item \spxentry{plot\_sample\_counts()}\spxextra{in module ember\_py.plots}, \hyperpage{9}
+
+\end{sphinxtheindex}

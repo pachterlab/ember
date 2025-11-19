@@ -1,0 +1,44 @@
+\babel@toc {english}{}
+\contentsline {chapter}{\numberline {1}ember\_py package}{3}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Submodules}{3}{section.1.1}%
+\contentsline {section}{\numberline {1.2}ember\_py.light\_ember module}{3}{section.1.2}%
+\contentsline {section}{\numberline {1.3}ember\_py.generate\_pvals module}{6}{section.1.3}%
+\contentsline {section}{\numberline {1.4}ember\_py.plots module}{7}{section.1.4}%
+\contentsline {section}{\numberline {1.5}ember\_py.top\_genes module}{9}{section.1.5}%
+\contentsline {section}{\numberline {1.6}Module contents}{11}{section.1.6}%
+\contentsline {chapter}{\numberline {2}Command Line Interface}{13}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Positional Arguments}{13}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Sub\sphinxhyphen {}commands}{13}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}light\_ember}{13}{subsection.2.2.1}%
+\contentsline {subsubsection}{Positional Arguments}{14}{subsubsection*.12}%
+\contentsline {subsubsection}{Sampling Parameters}{14}{subsubsection*.13}%
+\contentsline {subsubsection}{P\sphinxhyphen {}value Parameters}{14}{subsubsection*.14}%
+\contentsline {subsubsection}{Performance Parameters}{15}{subsubsection*.15}%
+\contentsline {subsection}{\numberline {2.2.2}generate\_pvals}{15}{subsection.2.2.2}%
+\contentsline {subsubsection}{Positional Arguments}{15}{subsubsection*.16}%
+\contentsline {subsubsection}{Named Arguments}{15}{subsubsection*.17}%
+\contentsline {subsubsection}{Performance Parameters}{16}{subsubsection*.18}%
+\contentsline {subsubsection}{Internal Arguments (used by light\_ember)}{16}{subsubsection*.19}%
+\contentsline {subsection}{\numberline {2.2.3}plot\_partition\_specificity}{16}{subsection.2.2.3}%
+\contentsline {subsubsection}{Positional Arguments}{16}{subsubsection*.20}%
+\contentsline {subsubsection}{Named Arguments}{16}{subsubsection*.21}%
+\contentsline {subsection}{\numberline {2.2.4}plot\_block\_specificity}{17}{subsection.2.2.4}%
+\contentsline {subsubsection}{Positional Arguments}{17}{subsubsection*.22}%
+\contentsline {subsubsection}{Named Arguments}{17}{subsubsection*.23}%
+\contentsline {subsection}{\numberline {2.2.5}plot\_sample\_counts}{17}{subsection.2.2.5}%
+\contentsline {subsubsection}{Positional Arguments}{18}{subsubsection*.24}%
+\contentsline {subsubsection}{Named Arguments}{18}{subsubsection*.25}%
+\contentsline {subsection}{\numberline {2.2.6}plot\_psi\_blocks}{18}{subsection.2.2.6}%
+\contentsline {subsubsection}{Positional Arguments}{18}{subsubsection*.26}%
+\contentsline {subsubsection}{Named Arguments}{18}{subsubsection*.27}%
+\contentsline {subsection}{\numberline {2.2.7}highly\_specific\_to\_partition}{18}{subsection.2.2.7}%
+\contentsline {subsubsection}{Positional Arguments}{19}{subsubsection*.28}%
+\contentsline {subsubsection}{Threshold Parameters}{19}{subsubsection*.29}%
+\contentsline {subsection}{\numberline {2.2.8}highly\_specific\_to\_block}{19}{subsection.2.2.8}%
+\contentsline {subsubsection}{Positional Arguments}{19}{subsubsection*.30}%
+\contentsline {subsubsection}{Threshold Parameters}{19}{subsubsection*.31}%
+\contentsline {subsection}{\numberline {2.2.9}non\_specific\_to\_partition}{20}{subsection.2.2.9}%
+\contentsline {subsubsection}{Positional Arguments}{20}{subsubsection*.32}%
+\contentsline {subsubsection}{Threshold Parameters}{20}{subsubsection*.33}%
+\contentsline {chapter}{Python Module Index}{21}{section*.34}%
+\contentsline {chapter}{Index}{23}{section*.35}%
