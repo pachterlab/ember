@@ -24,16 +24,16 @@ pip install git+https://github.com/pachterlab/ember.git
 Import in python/Jupyter
 
 ```bash
-import ember
+import ember_py
 ````
 
 Import specific function in python/Jupyter
 
 ```bash
-from ember.light_ember import light_ember
-from ember.generate_pvals import generate_pvals
-from ember.plots import plot_partition_specificity, plot_block_specificity, plot_sample_counts, plot_psi_blocks
-from ember.top_genes import highly_specific_to_block, highly_specific_to_partition, non_specific_to_partition
+from ember_py.light_ember import light_ember
+from ember_py.generate_pvals import generate_pvals
+from ember_py.plots import plot_partition_specificity, plot_block_specificity, plot_sample_counts, plot_psi_blocks
+from ember_py.top_genes import highly_specific_to_block, highly_specific_to_partition, non_specific_to_partition
 ````
 Run in commandline
 ```bash
