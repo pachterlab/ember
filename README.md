@@ -1,4 +1,5 @@
 # ember
+[![PyPI version](https://img.shields.io/pypi/v/ember_py.svg)](https://pypi.org/project/ember_py/)
 ember is a python and command line tool that can identify highly specific genes to a given partition (e.g., Age, Genotype, Cell type, etc.) in high-dimentional single cell RNA sequencing data. For an overview of how ember works, refer to [the ember guide (slides)](./assets/ember_guide.pdf).
 
 <p align="center">
