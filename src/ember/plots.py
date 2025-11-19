@@ -182,8 +182,14 @@ def plot_partition_specificity(partition_label,
         mpatches.Patch(facecolor='none', edgecolor=colors['marker'], linewidth=2, label='Marker Genes'),
         mpatches.Patch(facecolor='none', edgecolor=colors['housekeeping'], linewidth=2, label='Housekeeping Genes')
     ]
-    ax.legend(handles=handles, fontsize=fontsize - 2, loc='lower left', frameon=True)
+    leg = ax.legend(handles=handles,
+                    fontsize=fontsize - 6,
+                    loc='lower left',
+                    frameon=True)
 
+    # reduce opacity
+    leg.get_frame().set_alpha(0.2)   
+    
     # Final formatting
     ax.set_xlabel(r'$\Psi$', fontsize=fontsize + 3)
     ax.set_ylabel(r'$\zeta$', fontsize=fontsize + 3)
@@ -321,8 +327,15 @@ def plot_block_specificity(partition_label,
         mpatches.Patch(facecolor='none', edgecolor=colors['highlight'], linewidth=2, label='Highlighted Genes'),
         mpatches.Patch(facecolor='none', edgecolor=colors['top_genes'], linewidth=2, label='Top Genes (Both)')
     ]
-    ax.legend(handles=handles, fontsize=fontsize - 2, loc='lower left', frameon=True)
+    leg = ax.legend(handles=handles,
+                    fontsize=fontsize - 6,
+                    loc='lower left',
+                    frameon=True)
 
+    # reduce opacity
+    leg.get_frame().set_alpha(0.2)   
+
+    
     # Final formatting
     ax.set_xlabel(r'$\Psi$', fontsize=fontsize + 3)
     ax.set_ylabel(fr'$\psi_{{{block_label}}}$', fontsize=fontsize + 3)
