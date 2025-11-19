@@ -3,7 +3,7 @@ import sys
 from .light_ember import light_ember
 from .generate_pvals import generate_pvals
 from .plots import plot_partition_specificity, plot_block_specificity, plot_sample_counts, plot_psi_blocks
-from .top_genes import highly_specific_to_partition, highly_specific_to_block, non_specific_to_partition # New Import
+from .top_genes import highly_specific_to_partition, highly_specific_to_block, non_specific_to_partition
 
 def create_parser():
     """Creates and returns the ArgumentParser object for the ember toolkit."""

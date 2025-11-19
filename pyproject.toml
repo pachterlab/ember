@@ -3,16 +3,16 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ember"
+name = "ember_py"
 version = "0.1.0"
 description = "ember: Entropy Metrics for Biological ExploRation"
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }          
+license = { file = "LICENSE" }        
 authors = [{ name = "Nikhila P. Swarna", email = "nswarna@caltech.edu" }]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
+  "License :: OSI Approved :: BSD License",
   "Operating System :: OS Independent",
 ]
 
@@ -29,7 +29,8 @@ dependencies = [
 ]
 
 [project.scripts]
-ember = "ember.__main__:main"
+ember = "ember_py.__main__:main"
+
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ember"]
+packages = ["src/ember_py"]
