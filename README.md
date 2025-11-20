@@ -7,7 +7,7 @@ ember is a python and command line tool that can identify highly specific genes 
   <img alt="ember in a nutshell" src="./assets/ember_nutshell.png" width="100%">
 </p>
 
-For a hands on tutorial, check out this [collab notebook](https://colab.research.google.com/drive/1OSMu27FiXWf1a1KFhAZ0fnbgMtLbH9YU?usp=sharing).
+For a hands on tutorial, check out this [colab notebook](https://colab.research.google.com/drive/1OSMu27FiXWf1a1KFhAZ0fnbgMtLbH9YU?usp=sharing).
 
 ## Installation
 You can install the package from github using pip:
