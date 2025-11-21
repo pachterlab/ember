@@ -13,7 +13,7 @@ For a hands on tutorial, check out this [colab notebook](https://colab.research.
 You can install the package from github using pip:
 
 ```bash
-pip install ember-py==0.1.0
+pip install ember-py
 ````
 
 or 
@@ -27,7 +27,7 @@ We reccommned using ember in a fresh conda environment to avoid depnendency issu
 ```bash
 conda create -n ember_env python=3.10
 conda activate ember_env
-pip install ember-py==0.1.0
+pip install ember-py
 ````
 
 Import in python/Jupyter
