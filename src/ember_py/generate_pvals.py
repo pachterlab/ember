@@ -321,30 +321,25 @@ def generate_pvals(
         final.index.name = 'gene_name'
         pval_cols = ['Psi p-value', 'Zeta p-value']
         
-    # Perfrom global multiple testing correction for all tests and save in q-value columns
-   
+    # Global multiple testing correction across all p-value columns at once
     pval_cols = [c for c in final.columns if c.lower().endswith('p-value')]
-    records = [] 
+
+    parts = []
     for col in pval_cols:
         s = final[col]
-        mask_valid = s.notna() & np.isfinite(s.values)
-        for idx in final.index[mask_valid]:
-            records.append((idx, col, float(final.at[idx, col])))
+        valid = s[s.notna() & np.isfinite(s.values)]
+        parts.append(valid.rename(col))
 
-    all_pvals = np.array([r[2] for r in records], dtype=float)
-
-    # Global q-value across ALL p-values (both columns) at once
-    _, qvals, _, _ = multipletests(all_pvals, method='fdr_bh')
+    stacked = pd.concat(parts, keys=pval_cols)
+    _, qvals, _, _ = multipletests(stacked.values, method='fdr_bh')
+    qval_series = pd.Series(qvals, index=stacked.index)
 
     for col in pval_cols:
         fdr_col = col.replace('p-value', 'q-value')
-        if fdr_col not in final.columns:
-            final[fdr_col] = np.nan
-
-    # Write back corrected q-values to the matching rows/columns
-    for (idx, col, _), q in zip(records, qvals):
-        fdr_col = col.replace('p-value', 'q-value')
-        final.at[idx, fdr_col] = q
+        final[fdr_col] = np.nan
+        if col in qval_series.index.get_level_values(0):
+            col_qvals = qval_series[col]
+            final.loc[col_qvals.index, fdr_col] = col_qvals.values
 
 
     save_dir = os.path.expanduser(save_dir)

@@ -1,14 +1,10 @@
 import os
 import gc
-import glob
-import shutil
 import warnings
 import numpy as np
 import pandas as pd
-import scanpy as sc
 import anndata as ad
 import multiprocessing
-from tempfile import mkdtemp
 from tqdm import tqdm
 from .generate_entropy_metrics import generate_entropy_metrics
 from .generate_pvals import generate_pvals
@@ -22,7 +18,7 @@ def _worker_wrapper(args):
     """
     return _run_computation_on_subset(*args)
 
-def _prepare_task_args(sets, sample_id_col, partition_label, temp_dir, h5ad_dir=None):
+def _prepare_task_args(sets, sample_id_col, partition_label, h5ad_dir):
     """
     Generator that handles all file I/O. It prepares and yields a tuple
     of all arguments needed for each permutation task.
@@ -31,45 +27,29 @@ def _prepare_task_args(sets, sample_id_col, partition_label, temp_dir, h5ad_dir=
     for i in range(len(sets)):
         subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[i])].index
         subset_in_memory = adata[subset_ids_index, :].to_memory().copy()
-        
-        # Extract the raw, decoupled data components
+
         data_matrix = subset_in_memory.X
         obs_df = subset_in_memory.obs
         var_index = subset_in_memory.var.index
 
-        # Yield a single tuple containing ALL arguments for the worker
-        yield (i, data_matrix, obs_df, var_index, partition_label, temp_dir)
+        yield (i, data_matrix, obs_df, var_index, partition_label)
 
     adata.file.close()
-    
 
-def _run_computation_on_subset(i, data_matrix, obs_df, var_index, partition_label, temp_dir):
+
+def _run_computation_on_subset(i, data_matrix, obs_df, var_index, partition_label):
     """
     Worker that accepts raw data and rebuilds a clean AnnData object.
-    Runs generate_entropy_metrics on rebuild anndata.
+    Returns entropy metrics directly to avoid disk I/O per draw.
     """
-    # Rebuild a clean AnnData object
     subset = ad.AnnData(X=data_matrix, obs=obs_df)
     subset.var.index = var_index
-    
-    # Shuffling the labels
-    draw_code = f"BALANCED_{i:02d}"
-    draw_dir = os.path.join(temp_dir, draw_code)
-    os.makedirs(draw_dir, exist_ok=True)
-    
-    # Generate metrics
-    temp_psi, temp_psi_block, temp_zeta = generate_entropy_metrics(subset, partition_label)
 
-    entropy_df = pd.DataFrame({
-        f"Psi_{partition_label}": temp_psi,
-        f"Zeta_{partition_label}": temp_zeta
-    }, index=subset.var.index)
-    entropy_df.to_csv(os.path.join(draw_dir, f"entropy_metrics_{partition_label}.csv"))
-    temp_psi_block.to_csv(os.path.join(draw_dir, f"Psi_block_{partition_label}.csv"))
-    del(subset, temp_psi, temp_psi_block, temp_zeta)
+    temp_psi, temp_psi_block, temp_zeta = generate_entropy_metrics(subset, partition_label)
+    del subset
     gc.collect()
 
-    return f"Task {i} completed."
+    return i, np.asarray(temp_psi), temp_psi_block, np.asarray(temp_zeta)
 
 def light_ember(
     h5ad_dir,
@@ -303,120 +283,107 @@ def light_ember(
         
     if sampling:
         if save_draws:
-            #Save draws to folder named "balanced_draws" in save_dir
-            temp_dir = os.path.join(save_dir, "balanced_draws")
-            os.makedirs(temp_dir, exist_ok=True)
-            print(f'\nDraws saved to: {temp_dir}.')
-        else:
-            # Temporary directory
-            temp_dir = mkdtemp(prefix="ember_balanced_")
-            print(f'\nTemp files location: {temp_dir}.')
+            draws_dir = os.path.join(os.path.expanduser(save_dir), "balanced_draws")
+            os.makedirs(draws_dir, exist_ok=True)
+            print(f'\nDraws will be saved to: {draws_dir}.')
 
-        try:
+        task_generator = _prepare_task_args(
+            sets,
+            sample_id_col,
+            partition_label,
+            h5ad_dir=h5ad_dir
+        )
 
-            # Create the generator that will produce the arguments for each task
-            task_generator = _prepare_task_args(
-                sets,
-                sample_id_col,
-                partition_label,
-                temp_dir,  
-                h5ad_dir=h5ad_dir
-            )
+        print(f"\nComputing {num_draws} iterations in parallel with {n_cpus} workers")
+        results = []
+        with multiprocessing.Pool(processes=n_cpus) as pool:
+            for result in tqdm(pool.imap_unordered(_worker_wrapper, task_generator), total=len(sets)):
+                results.append(result)
+                # Write each draw immediately so completed work survives a crash
+                if save_draws:
+                    i, temp_psi, temp_psi_block, temp_zeta = result
+                    draw_dir = os.path.join(draws_dir, f"BALANCED_{i:02d}")
+                    os.makedirs(draw_dir, exist_ok=True)
+                    pd.DataFrame({
+                        f"Psi_{partition_label}": temp_psi,
+                        f"Zeta_{partition_label}": temp_zeta,
+                    }, index=temp_psi_block.index).to_csv(
+                        os.path.join(draw_dir, f"entropy_metrics_{partition_label}.csv")
+                    )
+                    temp_psi_block.to_csv(os.path.join(draw_dir, f"Psi_block_{partition_label}.csv"))
 
-            print(f"\nComputing {num_draws} iterations in parallel with {n_cpus} workers")
-            results = []
-            # Create a pool of worker processes
-            with multiprocessing.Pool(processes=n_cpus) as pool:
-                for result in tqdm(pool.imap_unordered(_worker_wrapper, task_generator), total=len(sets)):
-                    results.append(result)
+        # ========== Aggregation Phase ==========
+        save_dir = os.path.expanduser(save_dir)
+        os.makedirs(save_dir, exist_ok=True)
+        print(f'\nAggregating entropy metrics from {num_draws} samples.')
 
+        all_Psi = [r[1] for r in results]
+        Psi_block_list = [r[2] for r in results]
+        all_Zeta = [r[3] for r in results]
+        gene_names = results[0][2].index
 
-            # ========== Aggregation Phase ==========
-            save_dir = os.path.expanduser(save_dir)
-            os.makedirs(save_dir, exist_ok=True)
-            print(f'\nAggregating entropy metrics from {num_draws} samples.')
+        # Align Psi_block columns across draws
+        common_blocks = sorted(set.intersection(*(set(df.columns) for df in Psi_block_list)))
+        Psi_block_list = [df[common_blocks] for df in Psi_block_list]
 
-            all_Psi, all_Zeta, Psi_block_list = [], [], []
+        # Compute mean/std once across all draws
+        Psi_arr = np.stack(all_Psi)
+        Zeta_arr = np.stack(all_Zeta)
+        #Psi for genes with close to zero counts is set to -1 in generate_entropy_metrics.
+        #Masking over these values to avoid miscalculations.
+        mask = Psi_arr != -1
 
-            # Load all runs first
-            for pair_dir in sorted(glob.glob(os.path.join(temp_dir, "BALANCED_*"))):
-                var_df = pd.read_csv(os.path.join(pair_dir, f"entropy_metrics_{partition_label}.csv"), index_col=0)
-                sib_df = pd.read_csv(os.path.join(pair_dir, f"Psi_block_{partition_label}.csv"), index_col=0)
-                gene_names = var_df.index
+        # Suppress numpy warnings for empty slices and degrees of freedom <= 0
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
 
-                all_Psi.append(var_df[f"Psi_{partition_label}"].values)
-                all_Zeta.append(var_df[f"Zeta_{partition_label}"].values)
-                Psi_block_list.append(sib_df)
+            aggregate_entropy_df = pd.DataFrame({
+                f"Psi_mean_{partition_label}" : np.nanmean(np.where(mask, Psi_arr, np.nan), axis=0),
+                f"Psi_std_{partition_label}"  : np.nanstd(np.where(mask, Psi_arr, np.nan), axis=0),
+                f"Psi_valid_counts_{partition_label}" : np.sum(mask, axis=0),
+                f"Zeta_mean_{partition_label}": np.nanmean(np.where(mask, Zeta_arr, np.nan), axis=0),
+                f"Zeta_std_{partition_label}" : np.nanstd(np.where(mask, Zeta_arr, np.nan), axis=0),
+                f"Zeta_valid_counts_{partition_label}" : np.sum(mask, axis=0)
+            }, index=gene_names)
 
-            # Align SIB columns
-            common_blocks = sorted(set.intersection(*(set(df.columns) for df in Psi_block_list)))
-            Psi_block_list = [df[common_blocks] for df in Psi_block_list]
+        # Replace mean/std with NaN when there are no valid counts
+        aggregate_entropy_df.loc[
+            aggregate_entropy_df[f"Psi_valid_counts_{partition_label}"] == 0,
+            [f"Psi_mean_{partition_label}", f"Psi_std_{partition_label}"]
+        ] = np.nan
 
-            # Compute mean/std once across all draws
-            Psi_arr = np.stack(all_Psi)
-            Zeta_arr = np.stack(all_Zeta)
-            #Psi for genes with close to zero counts is set to -1 in generate_entropy_metrics.
-            #Masking over these values to avoid miscaulcations. 
-            mask = Psi_arr != -1
+        aggregate_entropy_df.loc[
+            aggregate_entropy_df[f"Zeta_valid_counts_{partition_label}"] == 0,
+            [f"Zeta_mean_{partition_label}", f"Zeta_std_{partition_label}"]
+        ] = np.nan
 
-            # Suppress numpy warnings for empty slices and degrees of freedom <= 0
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
+        # Save Psi_block means/stds
+        mean_Psi_block_dir = os.path.join(save_dir, "Psi_block_df")
+        os.makedirs(mean_Psi_block_dir, exist_ok=True)
+        aitchison_results = aitchison_mean_and_std(Psi_block_list)
+        mean_Psi_block = pd.DataFrame(aitchison_results[0], index=gene_names, columns=common_blocks)
+        std_Psi_block = pd.DataFrame(aitchison_results[1], index=gene_names, columns=common_blocks)
+        mean_Psi_block.to_csv(os.path.join(mean_Psi_block_dir, f"mean_Psi_block_df_{partition_label}.csv"))
+        std_Psi_block.to_csv(os.path.join(mean_Psi_block_dir, f"std_Psi_block_df_{partition_label}.csv"))
 
-                aggregate_entropy_df = pd.DataFrame({
-                    f"Psi_mean_{partition_label}" : np.nanmean(np.where(mask, Psi_arr, np.nan), axis=0),
-                    f"Psi_std_{partition_label}"  : np.nanstd(np.where(mask, Psi_arr, np.nan), axis=0),
-                    f"Psi_valid_counts_{partition_label}" : np.sum(mask, axis=0),
-                    f"Zeta_mean_{partition_label}": np.nanmean(np.where(mask, Zeta_arr, np.nan), axis=0),
-                    f"Zeta_std_{partition_label}" : np.nanstd(np.where(mask, Zeta_arr, np.nan), axis=0),
-                    f"Zeta_valid_counts_{partition_label}" : np.sum(mask, axis=0)
-                }, index=gene_names)
+        # Save final aggregated file
+        aggregate_entropy_df.to_csv(os.path.join(save_dir, f"entropy_metrics_{partition_label}.csv"))
+        print(f'\nSaved all entropy metrics to {os.path.join(save_dir, f"entropy_metrics_{partition_label}.csv")}')
 
-            # Replace mean/std with NaN when there are no valid counts
-            aggregate_entropy_df.loc[
-                aggregate_entropy_df[f"Psi_valid_counts_{partition_label}"] == 0,
-                [f"Psi_mean_{partition_label}", f"Psi_std_{partition_label}"]
-            ] = np.nan
-
-            aggregate_entropy_df.loc[
-                aggregate_entropy_df[f"Zeta_valid_counts_{partition_label}"] == 0,
-                [f"Zeta_mean_{partition_label}", f"Zeta_std_{partition_label}"]
-            ] = np.nan
-
-
-            # Save Psi_block means/stds
-            mean_Psi_block_dir = os.path.join(save_dir, "Psi_block_df")
-            os.makedirs(mean_Psi_block_dir, exist_ok=True)
-            aitchison_results = aitchison_mean_and_std(Psi_block_list)
-            mean_Psi_block = pd.DataFrame(aitchison_results[0], index=gene_names, columns=common_blocks)
-            std_Psi_block = pd.DataFrame(aitchison_results[1], index=gene_names, columns=common_blocks)
-            mean_Psi_block.to_csv(os.path.join(mean_Psi_block_dir, f"mean_Psi_block_df_{partition_label}.csv"))
-            std_Psi_block.to_csv(os.path.join(mean_Psi_block_dir, f"std_Psi_block_df_{partition_label}.csv"))
-
-            # Save final aggregated file
-            aggregate_entropy_df.to_csv(os.path.join(save_dir, f"entropy_metrics_{partition_label}.csv"))
-            print(f'\nSaved all entropy metrics to {os.path.join(save_dir, f"entropy_metrics_{partition_label}.csv")}')
-
-            if partition_pvals or block_pvals:
-                generate_pvals(h5ad_dir = h5ad_dir,
-                                       partition_label = partition_label,
-                                       entropy_metrics_dir = save_dir,
-                                       save_dir = save_dir,
-                                       sample_id_col = sample_id_col,
-                                       category_col = category_col, 
-                                       condition_col = condition_col, 
-                                       block_label=block_label,
-                                       n_iterations=n_pval_iterations, 
-                                       n_cpus=n_cpus, 
-                                       Psi_real = aggregate_entropy_df[f"Psi_mean_{partition_label}"], 
-                                       Psi_block_df_real = mean_Psi_block, 
-                                       Zeta_real = aggregate_entropy_df[f"Zeta_mean_{partition_label}"] )
-
-
-        finally:
-            if not save_draws:
-                shutil.rmtree(temp_dir, ignore_errors=True)
-                print(f"\nDeleted temp dir: {temp_dir}")
+        if partition_pvals or block_pvals:
+            generate_pvals(h5ad_dir = h5ad_dir,
+                                   partition_label = partition_label,
+                                   entropy_metrics_dir = save_dir,
+                                   save_dir = save_dir,
+                                   sample_id_col = sample_id_col,
+                                   category_col = category_col,
+                                   condition_col = condition_col,
+                                   block_label=block_label,
+                                   n_iterations=n_pval_iterations,
+                                   n_cpus=n_cpus,
+                                   Psi_real = aggregate_entropy_df[f"Psi_mean_{partition_label}"],
+                                   Psi_block_df_real = mean_Psi_block,
+                                   Zeta_real = aggregate_entropy_df[f"Zeta_mean_{partition_label}"] )
 
 
 
