@@ -383,7 +383,8 @@ def light_ember(
                                    n_cpus=n_cpus,
                                    Psi_real = aggregate_entropy_df[f"Psi_mean_{partition_label}"],
                                    Psi_block_df_real = mean_Psi_block,
-                                   Zeta_real = aggregate_entropy_df[f"Zeta_mean_{partition_label}"] )
+                                   Zeta_real = aggregate_entropy_df[f"Zeta_mean_{partition_label}"],
+                                   _merge_into_entropy_file=True)
 
 
 

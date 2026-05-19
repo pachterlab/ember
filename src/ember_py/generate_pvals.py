@@ -74,16 +74,17 @@ def generate_pvals(
     partition_label,
     entropy_metrics_dir,
     save_dir,
-    sample_id_col, 
-    category_col, 
+    sample_id_col,
+    category_col,
     condition_col,
     block_label=None,
     seed = 42,
     n_iterations=1000,
-    n_cpus=1, 
+    n_cpus=1,
     Psi_real = None,
     Psi_block_df_real = None,
-    Zeta_real = None
+    Zeta_real = None,
+    _merge_into_entropy_file = False
 ):
     """
     Calculate empirical p-values for entropy metrics from permutation test results.
@@ -344,10 +345,21 @@ def generate_pvals(
 
     save_dir = os.path.expanduser(save_dir)
     os.makedirs(save_dir, exist_ok=True)
-    if block_label is not None:
-        out_path = os.path.join(save_dir, f"pvals_entropy_metrics_{partition_label}_{block_label}.csv")
+
+    if _merge_into_entropy_file:
+        entropy_path = os.path.join(save_dir, f"entropy_metrics_{partition_label}.csv")
+        entropy_df = pd.read_csv(entropy_path, index_col=0)
+        merge_cols = [c for c in final.columns if 'p-value' in c.lower() or 'q-value' in c.lower()]
+        if block_label is not None:
+            merge_cols = ['psi_block'] + merge_cols
+        entropy_df = entropy_df.join(final[merge_cols], how='left')
+        entropy_df.to_csv(entropy_path)
+        print(f'\nMerged p-values into {entropy_path}')
     else:
-        out_path = os.path.join(save_dir, f"pvals_entropy_metrics_{partition_label}.csv")
-    final.to_csv(out_path)
-    print(f'\nSaved all entropy metrics along with pvalues to {out_path}')
+        if block_label is not None:
+            out_path = os.path.join(save_dir, f"pvals_entropy_metrics_{partition_label}_{block_label}.csv")
+        else:
+            out_path = os.path.join(save_dir, f"pvals_entropy_metrics_{partition_label}.csv")
+        final.to_csv(out_path)
+        print(f'\nSaved all entropy metrics along with pvalues to {out_path}')
     
