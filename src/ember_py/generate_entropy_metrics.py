@@ -141,9 +141,11 @@ def generate_entropy_metrics(adata, partition_label):
         Psi = np.where(E_T > 0, E_W / E_T, -1)
 
     # ── Psi_block scores ──────────────────────────────────────────────────────
-    with np.errstate(divide='ignore', invalid='ignore'):
-        Psi_block = np.divide(Psi_block_num, E_W[:, None], where=E_W[:, None] != 0)
-        Psi_block[~np.isfinite(Psi_block)] = 0
+    # Avoid np.divide(..., where=) without out= — its output shape is
+    # implementation-defined when the mask is all-False in some numpy builds.
+    E_W_safe = np.where(E_W > 0, E_W, np.inf)   # div by inf → 0 for dead genes
+    Psi_block = Psi_block_num / E_W_safe[:, None]
+    Psi_block[~np.isfinite(Psi_block)] = 0
 
     Psi_block_df = pd.DataFrame(Psi_block, index=adata.var.index, columns=blocks)
 
