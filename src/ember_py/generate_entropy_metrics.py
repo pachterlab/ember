@@ -77,8 +77,11 @@ def generate_entropy_metrics(adata, partition_label):
     """
 
     counts = adata.X
-    if not sparse.issparse(counts):
-        counts = csr_matrix(counts)
+    if sparse.issparse(counts):
+        if not np.issubdtype(counts.dtype, np.number):
+            counts = counts.astype(np.float32)
+    else:
+        counts = csr_matrix(np.asarray(counts, dtype=np.float32))
 
     # Convert to COO once — all entropy work runs on the three raw arrays
     # (row, col, data) without creating any additional sparse matrices.
