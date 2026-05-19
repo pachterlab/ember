@@ -304,18 +304,57 @@ if __name__ == "__main__":
     print("  [4/4] E_T cache path overhead…")
     et_old, et_new = bench_et_cache(n_cells=10000)
 
-    labels   = ["Disk I/O\nround-trip", "Block loop\n(per draw)", "q-value\nassignment", "E_T cache\npath"]
-    old_vals = [io_old, bl_old, qv_old, et_old]
-    new_vals = [io_new, bl_new, qv_new, et_new]
+    print("  [5/5] Full entropy math: sparse intermediate matrices vs COO…")
+    from src.ember_py.generate_entropy_metrics import generate_entropy_metrics as entropy_new
+    import anndata as ad
+    _adata = make_adata(10000, 8000, 6)
+    # old entropy: inline re-implementation using sparse intermediates
+    from scipy.sparse import csr_matrix as _csr
+    from scipy import sparse as _sparse
+    def _safe_log2(m):
+        m2 = m.copy(); m2.data = np.log2(m2.data); m2.data[~np.isfinite(m2.data)] = 0; return m2
+    def _safe_div(num, den):
+        d = np.copy(den); d[np.isclose(d,0)] = np.inf
+        r = num.multiply(1.0/d); r.eliminate_zeros(); return r
+    def entropy_old(adata, pl):
+        c = adata.X
+        if not _sparse.issparse(c): c = _csr(c)
+        tot = np.asarray(c.sum(axis=0)).ravel()
+        pi = _safe_div(c, tot); lpi = _safe_log2(pi)
+        ET = -pi.multiply(lpi).sum(axis=0).A1; ET[np.isclose(tot,0)] = -1
+        blks = adata.obs[pl].unique(); ng = adata.shape[1]; nb = len(blks)
+        op = adata.obs[pl].values; EW = np.zeros(ng); PBN = np.zeros((ng,nb))
+        for idx, blk in enumerate(blks):
+            mask = op == blk; bc = c[mask,:]
+            bs = np.asarray(bc.sum(axis=0)).ravel()
+            q = _safe_div(bc,bs); lq = _safe_log2(q)
+            ent = -q.multiply(lq).sum(axis=0).A1
+            pcj = np.divide(bs,tot,out=np.zeros_like(bs),where=~np.isclose(tot,0))
+            we = ent*pcj; EW+=we; PBN[:,idx]=we
+        with np.errstate(invalid='ignore',divide='ignore'):
+            Psi = np.where(ET>0, EW/ET, -1)
+        with np.errstate(divide='ignore',invalid='ignore'):
+            Pb = np.divide(PBN,EW[:,None],where=EW[:,None]!=0); Pb[~np.isfinite(Pb)]=0
+        Pb_df = pd.DataFrame(Pb, index=adata.var.index, columns=blks)
+        ez = -np.nansum(Pb_df*np.log2(Pb_df.where(Pb_df>0)),axis=1)
+        return Psi, Pb_df, 1-(ez/np.log2(nb))
+    REPS = 6
+    t_e_old = np.mean([( t0:=time.perf_counter(), entropy_old(_adata,"partition"), time.perf_counter()-t0)[2] for _ in range(REPS)])
+    t_e_new = np.mean([( t0:=time.perf_counter(), entropy_new(_adata,"partition"), time.perf_counter()-t0)[2] for _ in range(REPS)])
+
+    labels   = ["Disk I/O\nround-trip", "Block loop\n(per draw)", "q-value\nassignment", "E_T cache\npath", "Entropy math\n(full, per draw)"]
+    old_vals = [io_old, bl_old, qv_old, et_old, t_e_old]
+    new_vals = [io_new, bl_new, qv_new, et_new, t_e_new]
     speedups = [o / n for o, n in zip(old_vals, new_vals)]
 
     # ── Overall light_ember estimate (100 draws, single-threaded) ─────────────
-    # bench_disk_vs_memory used 60 draws; scale I/O cost to 100
+    # bench_disk_vs_memory used 60 draws; scale I/O cost to 100.
+    # Per-draw compute uses the full entropy math timing (t_e_*).
     N_DRAWS = 100
     IO_SCALE = N_DRAWS / 60
 
     overall_segments = {
-        "Per-draw compute":  (N_DRAWS * bl_old,  N_DRAWS * bl_new),
+        "Per-draw compute":  (N_DRAWS * t_e_old,  N_DRAWS * t_e_new),
         "Disk I/O overhead": (io_old * IO_SCALE,  io_new * IO_SCALE),
         "q-value calc":      (qv_old,              qv_new),
     }
@@ -425,5 +464,5 @@ if __name__ == "__main__":
 
     print("\nResults summary:")
     for label, o, n, s in zip(labels, old_vals, new_vals, speedups):
-        print(f"  {label.replace(chr(10), ' '):30s}  old={o:.3f}s  new={n:.4f}s  speedup={s:.1f}x")
-    print(f"\n  Overall light_ember ({N_DRAWS} draws):  old≈{total_old:.1f}s  new≈{total_new:.1f}s  speedup={overall_speedup:.1f}x")
+        print(f"  {label.replace(chr(10),' '):35s}  old={o:.3f}s  new={n:.4f}s  speedup={s:.2f}x")
+    print(f"\n  Overall light_ember ({N_DRAWS} draws):  old≈{total_old:.1f}s  new≈{total_new:.1f}s  speedup={overall_speedup:.2f}x")
