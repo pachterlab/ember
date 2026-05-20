@@ -24,19 +24,22 @@ def _prepare_task_args(sets, sample_id_col, partition_label, h5ad_dir):
     """
     Generator that handles all file I/O. It prepares and yields a tuple
     of all arguments needed for each permutation task.
+
+    Loads the full AnnData into memory once and uses boolean row indexing
+    per draw. This avoids backed-mode materialisation bugs where .X can
+    return a degenerate (1,1) array for certain h5ad storage formats.
     """
-    adata = ad.read_h5ad(h5ad_dir, backed='r')
+    print(f'\nLoading full AnnData into memory for draw extraction.')
+    adata = ad.read_h5ad(h5ad_dir)
+    sample_col = adata.obs[sample_id_col]
+    var_index = adata.var.index
+    n_var = len(var_index)
+
     for i in range(len(sets)):
-        subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[i])].index
-        subset_in_memory = adata[subset_ids_index, :].to_memory().copy()
+        row_mask = sample_col.isin(sets[i]).values
+        raw_X = adata.X[row_mask]
+        obs_df = adata.obs[row_mask]
 
-        obs_df = subset_in_memory.obs
-        var_index = subset_in_memory.var.index
-        raw_X = subset_in_memory.X
-
-        # Normalize to a concrete CSR float32 matrix before pickling to workers.
-        # This prevents backed/lazy array types from arriving with wrong dtype or
-        # shape after multiprocessing deserialisation.
         if sparse.issparse(raw_X):
             data_matrix = csr_matrix(raw_X, dtype=np.float32)
         else:
@@ -45,15 +48,14 @@ def _prepare_task_args(sets, sample_id_col, partition_label, h5ad_dir):
                 arr = arr.reshape(1, -1)
             data_matrix = csr_matrix(arr)
 
-        if data_matrix.shape != (len(obs_df), len(var_index)):
+        if data_matrix.shape[1] != n_var:
             raise ValueError(
-                f"Draw {i}: X shape {data_matrix.shape} does not match "
-                f"obs ({len(obs_df)}) × var ({len(var_index)})"
+                f"Draw {i}: X has {data_matrix.shape[1]} columns but "
+                f"adata.var has {n_var} genes. Check that adata.X contains "
+                f"the expression matrix (not a layer or embedding)."
             )
 
         yield (i, data_matrix, obs_df, var_index, partition_label)
-
-    adata.file.close()
 
 
 def _run_computation_on_subset(i, data_matrix, obs_df, var_index, partition_label):

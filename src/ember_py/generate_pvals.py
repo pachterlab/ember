@@ -24,18 +24,21 @@ def _prepare_permutation_tasks(h5ad_dir, sets, sample_id_col, partition_label, b
     """
     Generator that handles all file I/O. It prepares and yields a tuple
     of all arguments needed for each permutation task.
+
+    Loads the full AnnData into memory once and uses boolean row indexing
+    per draw, avoiding backed-mode materialisation bugs.
     """
-    adata = ad.read_h5ad(h5ad_dir, backed='r')
-    
+    adata = ad.read_h5ad(h5ad_dir)
+    sample_col = adata.obs[sample_id_col]
+    var_index = adata.var.index
+    n_var = len(var_index)
+
     for i in range(n_iterations):
         current_set_index = i % len(sets)
-        subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[current_set_index])].index
-        subset_in_memory = adata[subset_ids_index, :].to_memory().copy()
-        
-        obs_df = subset_in_memory.obs
-        var_index = subset_in_memory.var.index
-        original_labels = subset_in_memory.obs[partition_label].values
-        raw_X = subset_in_memory.X
+        row_mask = sample_col.isin(sets[current_set_index]).values
+        raw_X = adata.X[row_mask]
+        obs_df = adata.obs[row_mask]
+        original_labels = obs_df[partition_label].values
 
         if sparse.issparse(raw_X):
             data_matrix = csr_matrix(raw_X, dtype=np.float32)
@@ -45,10 +48,14 @@ def _prepare_permutation_tasks(h5ad_dir, sets, sample_id_col, partition_label, b
                 arr = arr.reshape(1, -1)
             data_matrix = csr_matrix(arr)
 
-        # Yield a single tuple containing all arguments for the worker
+        if data_matrix.shape[1] != n_var:
+            raise ValueError(
+                f"Iteration {i}: X has {data_matrix.shape[1]} columns but "
+                f"adata.var has {n_var} genes. Check that adata.X contains "
+                f"the expression matrix (not a layer or embedding)."
+            )
+
         yield (i, data_matrix, obs_df, var_index, original_labels, partition_label, block_label)
-        
-    adata.file.close()
 
 def _run_permutation_task(i, data_matrix, obs_df, var_index, original_labels, partition_label, block_label):
     """
