@@ -28,6 +28,9 @@ dependencies = [
     "adjustText>=0.8",
 ]
 
+[project.optional-dependencies]
+fast = ["numba>=0.56"]
+
 [project.scripts]
 ember = "ember_py.__main__:main"
 
