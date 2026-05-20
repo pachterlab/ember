@@ -6,6 +6,8 @@ import pandas as pd
 import anndata as ad
 import multiprocessing
 from tqdm import tqdm
+from scipy.sparse import csr_matrix
+from scipy import sparse
 from .generate_entropy_metrics import generate_entropy_metrics
 from .generate_pvals import generate_pvals
 from .sample_replicates import generate_balanced_draws, aitchison_mean_and_std
@@ -28,9 +30,26 @@ def _prepare_task_args(sets, sample_id_col, partition_label, h5ad_dir):
         subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[i])].index
         subset_in_memory = adata[subset_ids_index, :].to_memory().copy()
 
-        data_matrix = subset_in_memory.X
         obs_df = subset_in_memory.obs
         var_index = subset_in_memory.var.index
+        raw_X = subset_in_memory.X
+
+        # Normalize to a concrete CSR float32 matrix before pickling to workers.
+        # This prevents backed/lazy array types from arriving with wrong dtype or
+        # shape after multiprocessing deserialisation.
+        if sparse.issparse(raw_X):
+            data_matrix = csr_matrix(raw_X, dtype=np.float32)
+        else:
+            arr = np.asarray(raw_X, dtype=np.float32)
+            if arr.ndim == 1:
+                arr = arr.reshape(1, -1)
+            data_matrix = csr_matrix(arr)
+
+        if data_matrix.shape != (len(obs_df), len(var_index)):
+            raise ValueError(
+                f"Draw {i}: X shape {data_matrix.shape} does not match "
+                f"obs ({len(obs_df)}) × var ({len(var_index)})"
+            )
 
         yield (i, data_matrix, obs_df, var_index, partition_label)
 
@@ -42,8 +61,11 @@ def _run_computation_on_subset(i, data_matrix, obs_df, var_index, partition_labe
     Worker that accepts raw data and rebuilds a clean AnnData object.
     Returns entropy metrics directly to avoid disk I/O per draw.
     """
-    subset = ad.AnnData(X=data_matrix, obs=obs_df)
-    subset.var.index = var_index
+    subset = ad.AnnData(
+        X=data_matrix,
+        obs=obs_df,
+        var=pd.DataFrame(index=var_index),
+    )
 
     temp_psi, temp_psi_block, temp_zeta = generate_entropy_metrics(subset, partition_label)
     del subset

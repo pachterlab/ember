@@ -4,8 +4,10 @@ import os
 import gc
 import multiprocessing
 import anndata as ad
-from tqdm import tqdm 
+from tqdm import tqdm
 import scanpy as sc
+from scipy.sparse import csr_matrix
+from scipy import sparse
 from statsmodels.stats.multitest import multipletests
 from .generate_entropy_metrics import generate_entropy_metrics
 from .sample_replicates import generate_balanced_draws
@@ -30,11 +32,18 @@ def _prepare_permutation_tasks(h5ad_dir, sets, sample_id_col, partition_label, b
         subset_ids_index = adata.obs[adata.obs[sample_id_col].isin(sets[current_set_index])].index
         subset_in_memory = adata[subset_ids_index, :].to_memory().copy()
         
-        # Extract the raw, decoupled data components
-        data_matrix = subset_in_memory.X
         obs_df = subset_in_memory.obs
         var_index = subset_in_memory.var.index
         original_labels = subset_in_memory.obs[partition_label].values
+        raw_X = subset_in_memory.X
+
+        if sparse.issparse(raw_X):
+            data_matrix = csr_matrix(raw_X, dtype=np.float32)
+        else:
+            arr = np.asarray(raw_X, dtype=np.float32)
+            if arr.ndim == 1:
+                arr = arr.reshape(1, -1)
+            data_matrix = csr_matrix(arr)
 
         # Yield a single tuple containing all arguments for the worker
         yield (i, data_matrix, obs_df, var_index, original_labels, partition_label, block_label)
@@ -46,9 +55,11 @@ def _run_permutation_task(i, data_matrix, obs_df, var_index, original_labels, pa
     Worker that accepts raw data and rebuilds a clean AnnData object.
     Runs generate_entropy_metrics on rebuild anndata.
     """
-    # Rebuild a clean AnnData object
-    subset = ad.AnnData(X=data_matrix, obs=obs_df)
-    subset.var.index = var_index
+    subset = ad.AnnData(
+        X=data_matrix,
+        obs=obs_df,
+        var=pd.DataFrame(index=var_index),
+    )
     
     # Shuffling the labels
     subset.obs[partition_label] = np.random.permutation(original_labels)
