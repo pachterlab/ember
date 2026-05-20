@@ -44,7 +44,7 @@ def _run_computation_on_subset(i, row_indices, labels, var_index, partition_labe
     from ._shm_utils import read_shm_csr_rows
     data_matrix = read_shm_csr_rows(shm_desc, row_indices)
 
-    obs_df = pd.DataFrame({partition_label: labels}, index=range(len(labels)))
+    obs_df = pd.DataFrame({partition_label: labels}, index=np.arange(len(labels)).astype(str))
     subset = ad.AnnData(
         X=data_matrix,
         obs=obs_df,

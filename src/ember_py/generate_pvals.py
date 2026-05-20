@@ -46,7 +46,7 @@ def _run_permutation_task(i, row_indices, labels, var_index, partition_label, bl
     from ._shm_utils import read_shm_csr_rows
     data_matrix = read_shm_csr_rows(shm_desc, row_indices)
     shuffled = np.random.permutation(labels)
-    obs_df = pd.DataFrame({partition_label: shuffled}, index=range(len(shuffled)))
+    obs_df = pd.DataFrame({partition_label: shuffled}, index=np.arange(len(shuffled)).astype(str))
     subset = ad.AnnData(X=data_matrix, obs=obs_df, var=pd.DataFrame(index=var_index))
 
     Psi, Psi_block_df, Zeta = generate_entropy_metrics(subset, partition_label)
