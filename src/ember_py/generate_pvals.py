@@ -420,6 +420,8 @@ def generate_pvals(
             merge_cols = [c for c in final.columns if 'p-value' in c.lower() or 'q-value' in c.lower()]
             if block_label is not None:
                 merge_cols = ['psi_block'] + merge_cols
+            # Drop any pre-existing p/q-value columns to avoid join collision on re-runs
+            entropy_df = entropy_df.drop(columns=[c for c in merge_cols if c in entropy_df.columns], errors='ignore')
             entropy_df = entropy_df.join(final[merge_cols], how='left')
             entropy_df.to_csv(entropy_path)
             print(f'\nMerged p-values into {entropy_path}')
