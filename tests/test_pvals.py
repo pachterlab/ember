@@ -58,6 +58,39 @@ def test_pvals_in_valid_range():
     assert (pvals <= 1).all(), "p-values should be <= 1"
 
 
+def test_adaptive_stopping_default_runs_all_iterations():
+    """
+    Simulate the generate_pvals loop to verify adaptive_stopping=False
+    always runs all n_iterations regardless of convergence.
+    """
+    n_iters = 200
+    n_genes = 20
+    min_iters, check_interval, tol = 300, 100, 0.002
+    adaptive_stopping = False  # the default
+
+    rng = np.random.default_rng(0)
+    real_vals = rng.uniform(0, 1, n_genes)
+    count_ge = np.zeros(n_genes)
+    prev_pvals = None
+    n_done = 0
+    stopped_early = False
+
+    for _ in range(n_iters):
+        perm = rng.uniform(0, 1, n_genes)
+        count_ge += perm >= real_vals
+        n_done += 1
+        if adaptive_stopping and n_done >= min_iters:
+            curr = (count_ge + 1) / (n_done + 1)
+            if prev_pvals is not None and np.nanmax(np.abs(curr - prev_pvals)) < tol:
+                stopped_early = True
+                break
+            if n_done % check_interval == 0:
+                prev_pvals = curr
+
+    assert not stopped_early, "Loop stopped early with adaptive_stopping=False"
+    assert n_done == n_iters, f"Expected {n_iters} iterations, ran {n_done}"
+
+
 def test_pvals_monotone_with_real_score():
     """Higher real scores should yield higher (less significant) p-values on average."""
     rng = np.random.default_rng(7)

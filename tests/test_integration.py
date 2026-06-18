@@ -122,3 +122,48 @@ def test_rerun_does_not_raise(run_light_ember, h5ad_path, tmp_path):
         n_cpus=2,
         partition_pvals=True,
     )
+
+
+# ── block_pvals=True path ──────────────────────────────────────────────────────
+
+@pytest.fixture
+def run_with_block_pvals(h5ad_path, tmp_path):
+    save_dir = str(tmp_path / 'output_block')
+    light_ember(
+        h5ad_dir=h5ad_path,
+        partition_label='partition',
+        sample_id_col='sample_id',
+        category_col='category',
+        condition_col='condition',
+        save_dir=save_dir,
+        num_draws=10,
+        n_pval_iterations=50,
+        n_cpus=2,
+        block_pvals=True,
+        block_label='B0',
+    )
+    return save_dir
+
+
+def test_block_pval_columns_present(run_with_block_pvals):
+    path = os.path.join(run_with_block_pvals, 'entropy_metrics_partition.csv')
+    df = pd.read_csv(path, index_col=0)
+    for col in ['psi_block', 'psi_block p-value', 'psi_block q-value']:
+        assert col in df.columns, f"Missing block p-value column: {col}"
+
+
+def test_block_pvals_in_range(run_with_block_pvals):
+    path = os.path.join(run_with_block_pvals, 'entropy_metrics_partition.csv')
+    df = pd.read_csv(path, index_col=0)
+    vals = df['psi_block p-value'].dropna()
+    assert (vals > 0).all() and (vals <= 1).all(), \
+        f"psi_block p-values out of (0,1]: min={vals.min():.3f}, max={vals.max():.3f}"
+
+
+def test_block_pvals_q_values_present(run_with_block_pvals):
+    path = os.path.join(run_with_block_pvals, 'entropy_metrics_partition.csv')
+    df = pd.read_csv(path, index_col=0)
+    qvals = df['psi_block q-value'].dropna()
+    assert len(qvals) > 0, "No psi_block q-values written"
+    assert (qvals >= 0).all() and (qvals <= 1).all(), \
+        f"psi_block q-values out of [0,1]: min={qvals.min():.3f}, max={qvals.max():.3f}"

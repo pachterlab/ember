@@ -74,6 +74,7 @@ def generate_pvals(
     Psi_real=None,
     Psi_block_df_real=None,
     Zeta_real=None,
+    adaptive_stopping=False,
     _merge_into_entropy_file=False,
     _shm_descriptor=None,
     _obs_full=None,
@@ -154,6 +155,12 @@ def generate_pvals(
         Number of cpus to use to perfrom p-value calculation.
         Default set to 1 assuming no parallel compute power on local machine.
         User can input -1 to use all available cpus but one.
+
+    adaptive_stopping : bool, default=False
+        If True, stop early when p-value estimates converge (max change < 0.002
+        across a 100-iteration window, after a 300-iteration burn-in).
+        Default is False to always run all n_iterations for consistency with
+        the upstream implementation.
 
     Psi_real : pd.Series, default=None
         Observed Psi values for each gene.
@@ -354,7 +361,7 @@ def generate_pvals(
 
                     pbar.update(len(batch_tasks))
 
-                    if n_done >= min_iters:
+                    if adaptive_stopping and n_done >= min_iters:
                         curr = np.concatenate([
                             (psi_count_ge  + 1) / (n_done + 1),
                             (zeta_count_ge + 1) / (n_done + 1),

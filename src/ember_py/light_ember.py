@@ -399,6 +399,7 @@ def light_ember(
                     Psi_real=aggregate_entropy_df[f"Psi_mean_{partition_label}"],
                     Psi_block_df_real=mean_Psi_block,
                     Zeta_real=aggregate_entropy_df[f"Zeta_mean_{partition_label}"],
+                    adaptive_stopping=False,
                     _merge_into_entropy_file=True,
                     _shm_descriptor=shm_desc,
                     _obs_full=obs_full,
