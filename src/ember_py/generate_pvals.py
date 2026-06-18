@@ -306,7 +306,8 @@ def generate_pvals(
 
         gene_idx = Psi_real.index
         n_genes = len(gene_idx)
-        # Precompute integer positions of gene_idx within var_index for fast numpy indexing
+        # gene_idx is a filtered subset (Psi > 0); get_indexer maps it to positions
+        # in the full permutation arrays returned by workers (which cover all genes).
         gene_positions = var_index.get_indexer(gene_idx)
 
         psi_real_vals = Psi_real.values
@@ -319,7 +320,9 @@ def generate_pvals(
         zeta_count_ge = np.zeros(n_genes)
         psi_block_count_ge = np.zeros(n_genes) if block_label is not None else None
 
-        # Adaptive stopping parameters
+        # Adaptive stopping: check convergence every 100 iters after a 300-iter
+        # burn-in (enough iterations for p-value estimates to stabilise before
+        # the first comparison). Stop when no p-value shifts by more than 0.002.
         min_iters = 300
         check_interval = 100
         tol = 0.002
@@ -340,6 +343,8 @@ def generate_pvals(
                     if not batch_tasks:
                         break
 
+                    # imap_unordered: result order doesn't matter (we only accumulate counts),
+                    # and it avoids head-of-line blocking when one task is slower than others.
                     for psi_arr, psi_block_arr, zeta_arr in pool.imap_unordered(_worker_wrapper, batch_tasks):
                         psi_count_ge  += (psi_arr[gene_positions]  >= psi_real_vals)
                         zeta_count_ge += (zeta_arr[gene_positions] >= zeta_real_vals)
@@ -364,6 +369,8 @@ def generate_pvals(
                                 break
                         prev_pvals = curr
 
+        # +1 Laplace pseudo-count keeps all p-values in (0, 1] and prevents
+        # zero p-values from dominating FDR correction when n_iterations is small.
         Psi_p_values  = pd.Series((psi_count_ge  + 1) / (n_done + 1), index=gene_idx)
         Zeta_p_values = pd.Series((zeta_count_ge + 1) / (n_done + 1), index=gene_idx)
 

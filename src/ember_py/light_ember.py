@@ -277,7 +277,9 @@ def light_ember(
             )
             print(f'\nGenerating entropy metrics.')
 
-            # Generate pval sets from adata while it is still in memory
+            # Generate pval sets from adata while it is still in memory.
+            # Separate balanced draws for permutation testing vs. entropy estimation
+            # ensure the two phases use independent random samples.
             sets_pval = None
             if partition_pvals or block_pvals:
                 sets_pval, _ = generate_balanced_draws(
@@ -337,14 +339,17 @@ def light_ember(
             all_Zeta = [r[3] for r in results]
             gene_names = results[0][2].index
 
+            # A draw may yield zero cells for a rare block, making that block absent
+            # from its Psi_block_df columns; intersect so aggregation is always valid.
             common_blocks = sorted(set.intersection(*(set(df.columns) for df in Psi_block_list)))
             Psi_block_list = [df[common_blocks] for df in Psi_block_list]
 
             Psi_arr = np.stack(all_Psi)
             Zeta_arr = np.stack(all_Zeta)
-            mask = Psi_arr != -1
+            mask = Psi_arr != -1    # -1 sentinel: gene had zero total counts in that draw
 
             with warnings.catch_warnings():
+                # nanmean emits RuntimeWarning for genes where every draw was invalid.
                 warnings.simplefilter("ignore", category=RuntimeWarning)
 
                 aggregate_entropy_df = pd.DataFrame({
@@ -368,6 +373,8 @@ def light_ember(
 
             mean_Psi_block_dir = os.path.join(save_dir, "Psi_block_df")
             os.makedirs(mean_Psi_block_dir, exist_ok=True)
+            # Psi_block rows sum to 1 (compositional data); arithmetic mean distorts
+            # ratios near 0 and 1, so we use the Aitchison (geometric) mean on the simplex.
             aitchison_results = aitchison_mean_and_std(Psi_block_list)
             mean_Psi_block = pd.DataFrame(aitchison_results[0], index=gene_names, columns=common_blocks)
             std_Psi_block  = pd.DataFrame(aitchison_results[1], index=gene_names, columns=common_blocks)

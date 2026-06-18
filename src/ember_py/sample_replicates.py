@@ -117,9 +117,11 @@ def aitchison_mean_and_std(Psi_block_dfs_list):
 
     with np.errstate(divide='ignore'):
         # === Aitchison mean ===
+        # epsilon smoothing prevents log(0) for genes absent in a block.
         data_stack = np.stack([df.values for df in Psi_block_dfs_list], axis=0) + epsilon
         gmean_data = stats.gmean(data_stack, axis=0)
         gmean_df = pd.DataFrame(gmean_data, index=gene_names, columns=block_names)
+        # Re-normalise so rows sum to 1; fillna(0) handles all-zero genes.
         row_sums = gmean_df.sum(axis=1).replace(0, np.nan)
         normalized_df = gmean_df.div(row_sums, axis=0).fillna(0)
 

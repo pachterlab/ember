@@ -30,6 +30,12 @@ dependencies = [
 
 [project.optional-dependencies]
 fast = ["numba>=0.56"]
+dev  = ["pytest>=7.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "-v -p no:napari"
+norecursedirs = ["_archived"]
 
 [project.scripts]
 ember = "ember_py.__main__:main"

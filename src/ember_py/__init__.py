@@ -3,3 +3,4 @@ __version__ = "0.1.1"
 
 from .light_ember import light_ember
 from .generate_pvals import generate_pvals
+from ._shm_utils import cleanup_shm

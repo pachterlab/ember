@@ -154,18 +154,20 @@ def generate_entropy_metrics(adata, partition_label):
         p     = nz_data / np.where(total_counts_per_gene[nz_col] > 0,
                                     total_counts_per_gene[nz_col], 1.0)
         log_p = np.log2(np.where(p > 0, p, 1.0))
-        log_p[p <= 0] = 0
+        log_p[p <= 0] = 0           # entropy convention: 0·log(0) = 0
         E_T = np.bincount(nz_col, weights=-p * log_p, minlength=n_genes)
-        E_T[np.isclose(total_counts_per_gene, 0)] = -1
+        E_T[np.isclose(total_counts_per_gene, 0)] = -1  # sentinel: gene has no counts
 
         # ── Block-gene sums and within-block entropy ──────────────────────────
+        # Compound index flattens the 2D (block, gene) space to 1D so a single
+        # bincount pass can accumulate sums and entropy for all blocks at once.
         bg_idx = nz_bid * n_genes + nz_col
         bg_sum = np.bincount(bg_idx, weights=nz_data,
                               minlength=n_blocks * n_genes)
         denom  = bg_sum[bg_idx]
         pw     = np.where(denom > 0, nz_data / denom, 0.0)
         log_pw = np.log2(np.where(pw > 0, pw, 1.0))
-        log_pw[pw <= 0] = 0
+        log_pw[pw <= 0] = 0         # entropy convention: 0·log(0) = 0
         bg_ent = np.bincount(bg_idx, weights=-pw * log_pw,
                               minlength=n_blocks * n_genes)
 
@@ -187,6 +189,8 @@ def generate_entropy_metrics(adata, partition_label):
         Psi = np.where(E_T > 0, E_W / E_T, -1)
 
     # ── Psi_block scores ──────────────────────────────────────────────────────
+    # Replacing zero E_W with inf means 0/inf = 0 instead of 0/0 = nan for
+    # genes with no within-block entropy (avoids propagating NaN downstream).
     E_W_safe = np.where(E_W > 0, E_W, np.inf)
     Psi_block = Psi_block_num / E_W_safe[:, None]
     Psi_block[~np.isfinite(Psi_block)] = 0
