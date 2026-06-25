@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ember_py"
-version = "0.1.0"
+version = "0.1.1"
 description = "ember: Entropy Metrics for Biological ExploRation"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -27,6 +27,15 @@ dependencies = [
     "seaborn>=0.13",
     "adjustText>=0.8",
 ]
+
+[project.optional-dependencies]
+fast = ["numba>=0.56"]
+dev  = ["pytest>=7.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "-v -p no:napari"
+norecursedirs = ["_archived"]
 
 [project.scripts]
 ember = "ember_py.__main__:main"

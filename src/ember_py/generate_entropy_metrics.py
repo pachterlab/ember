@@ -1,13 +1,44 @@
-import os
 import pandas as pd
 import numpy as np
-import random
-from collections import defaultdict
-from itertools import product
-import scanpy as sc
 from scipy import sparse
-import warnings
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix
+
+# ── Optional Numba JIT ────────────────────────────────────────────────────────
+# If numba is installed (`pip install ember_py[fast]`), the entropy core runs
+# as a two-pass fused kernel that avoids ~6 temporary NumPy arrays and reads
+# non-zero data only twice regardless of n_blocks. Falls back to NumPy silently.
+try:
+    import numba as nb
+    _HAS_NUMBA = True
+
+    @nb.njit(cache=True)
+    def _entropy_core_nb(nz_data, nz_col, nz_bid, total_counts, n_genes, n_blocks):
+        """Fused two-pass kernel: block-gene totals, then E_T + bg_ent together."""
+        bg_sum = np.zeros(n_blocks * n_genes)
+        for k in range(len(nz_data)):
+            bg_sum[nz_bid[k] * n_genes + nz_col[k]] += nz_data[k]
+
+        E_T    = np.zeros(n_genes)
+        bg_ent = np.zeros(n_blocks * n_genes)
+        for k in range(len(nz_data)):
+            j  = nz_col[k]
+            tc = total_counts[j]
+            if tc > 0.0:
+                p = nz_data[k] / tc
+                if p > 0.0:
+                    E_T[j] -= p * np.log2(p)
+            bi    = nz_bid[k] * n_genes + j
+            denom = bg_sum[bi]
+            if denom > 0.0:
+                pw = nz_data[k] / denom
+                if pw > 0.0:
+                    bg_ent[bi] -= pw * np.log2(pw)
+
+        return E_T, bg_sum, bg_ent
+
+except ImportError:
+    _HAS_NUMBA = False
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def safe_log2_sparse(mat):
@@ -56,98 +87,120 @@ def safe_divide_sparse(numerator, denominator):
 def generate_entropy_metrics(adata, partition_label):
     """
     Generate entropy metrics Psi, Psi_blocks (dataframe) and Zeta.
-    
+
     Entropy metrics generated:
         - Psi : Fraction of infromation explained by partition of choice
         - Psi_block : Specificity of infromation to a block
         - Zeta : Speicifcty to a partition/ distance of Psi_blocks distribution from uniform
-    
+
     Parameters
     ----------
     adata : AnnData
         Annotated data object with `.obs` containing metadata.
     partition_label : str
         Column in `.obs` to partition by when calculating entropy metrics.
- 
-    
+
+
     Returns
     -------
     Psi : np.Array
         A list of Psi scores (between 0 and 1) corresponding to the selected partition for all genes in `.var`.
     Psi_block_df : pd.Dataframe
-        A dataframe of Psi_block scores (between 0 and 1) corresponding to the selected partition for all genes in `.var`. 
-        Scores are caluclated for all blocks, each column of the dataframe corresponds to one block. 
+        A dataframe of Psi_block scores (between 0 and 1) corresponding to the selected partition for all genes in `.var`.
+        Scores are caluclated for all blocks, each column of the dataframe corresponds to one block.
     Zeta : np.Array
         A list of Zeta scores (between 0 and 1) corresponding to the selected partition for all genes in `.var`.
-    
-    """
-    
-    counts = adata.X
-    # Input sparse matrix
-    if not sparse.issparse(counts):
-        counts = csr_matrix(counts)
 
-    # Row-wise sum
+    """
+
+    counts = adata.X
+    if sparse.issparse(counts):
+        if not np.issubdtype(counts.dtype, np.number):
+            counts = counts.astype(np.float32)
+    else:
+        counts = csr_matrix(np.asarray(counts, dtype=np.float32))
+
+    # Convert to COO once — all entropy work runs on the three raw arrays
+    # (row, col, data) without creating any additional sparse matrices.
+    coo = counts.tocoo()
+    nz_row = np.asarray(coo.row)
+    nz_col = np.asarray(coo.col)
+    nz_data = coo.data.astype(np.float64)
+    n_genes = counts.shape[1]
+
     total_counts_per_gene = np.asarray(counts.sum(axis=0)).ravel()
 
-    # Skip if total entropy has already been calculated 
-    if 'E_T' not in adata.var.columns:
-        # p_i = P(gene | total) across all cells
-        p_i = safe_divide_sparse(counts, total_counts_per_gene)
-        log_p_i = safe_log2_sparse(p_i)
-        
-        # Total entropy (E_T)
-        entropy_per_gene = p_i.multiply(log_p_i).sum(axis=0).A1
-        E_T = -entropy_per_gene
-        E_T[np.isclose(total_counts_per_gene, 0)] = -1
-        adata.var['E_T'] = E_T
-    else:
-        E_T = adata.var['E_T'].values
-
+    # ── Block mapping ─────────────────────────────────────────────────────────
     blocks = adata.obs[partition_label].unique()
-    n_genes = adata.shape[1]
     n_blocks = len(blocks)
-    
-    # Initialize E_W (within entropy) and Psi_block numerator (Psi_block_num)
-    E_W = np.zeros(n_genes)
-    Psi_block_num = np.zeros((n_genes, n_blocks))
+    obs_partition = adata.obs[partition_label].values
+    b2id = {b: i for i, b in enumerate(blocks)}
+    cell_bid = np.array([b2id[b] for b in obs_partition], dtype=np.int64)
+    nz_bid   = cell_bid[nz_row]
 
-    for idx, block in enumerate(blocks):
-        mask = adata.obs[partition_label] == block
-        block_counts = adata[mask, :].X
-        # Calculate entripy within each block
-        block_sum = np.asarray(block_counts.sum(axis=0)).ravel()
-        q_j = safe_divide_sparse(block_counts, block_sum)
-        log_q_j = safe_log2_sparse(q_j)
-        entropy = -q_j.multiply(log_q_j).sum(axis=0).A1
-
-        # Contribution of this block to Within Entropy (E_W)
-        p_c_j = np.divide(
-            block_sum,
+    # ── Entropy core ──────────────────────────────────────────────────────────
+    if _HAS_NUMBA:
+        E_T, bg_sum, bg_ent = _entropy_core_nb(
+            nz_data,
+            nz_col.astype(np.int64),
+            nz_bid.astype(np.int64),
             total_counts_per_gene,
-            out=np.zeros_like(block_sum),
-            where=~np.isclose(total_counts_per_gene, 0)
+            np.int64(n_genes),
+            np.int64(n_blocks),
         )
+        E_T[np.isclose(total_counts_per_gene, 0)] = -1
+    else:
+        # ── E_T: total entropy per gene ───────────────────────────────────────
+        p     = nz_data / np.where(total_counts_per_gene[nz_col] > 0,
+                                    total_counts_per_gene[nz_col], 1.0)
+        log_p = np.log2(np.where(p > 0, p, 1.0))
+        log_p[p <= 0] = 0           # entropy convention: 0·log(0) = 0
+        E_T = np.bincount(nz_col, weights=-p * log_p, minlength=n_genes)
+        E_T[np.isclose(total_counts_per_gene, 0)] = -1  # sentinel: gene has no counts
 
-        weighted_entropy = entropy * p_c_j
-        E_W += weighted_entropy
-        Psi_block_num[:, idx] = weighted_entropy
+        # ── Block-gene sums and within-block entropy ──────────────────────────
+        # Compound index flattens the 2D (block, gene) space to 1D so a single
+        # bincount pass can accumulate sums and entropy for all blocks at once.
+        bg_idx = nz_bid * n_genes + nz_col
+        bg_sum = np.bincount(bg_idx, weights=nz_data,
+                              minlength=n_blocks * n_genes)
+        denom  = bg_sum[bg_idx]
+        pw     = np.where(denom > 0, nz_data / denom, 0.0)
+        log_pw = np.log2(np.where(pw > 0, pw, 1.0))
+        log_pw[pw <= 0] = 0         # entropy convention: 0·log(0) = 0
+        bg_ent = np.bincount(bg_idx, weights=-pw * log_pw,
+                              minlength=n_blocks * n_genes)
 
-    # Psi score
+    # ── Reshape to (n_blocks, n_genes) ────────────────────────────────────────
+    bg_sum_2d = bg_sum.reshape(n_blocks, n_genes)
+    bg_ent_2d = bg_ent.reshape(n_blocks, n_genes)
+
+    # p_c_j = fraction of gene j's total counts belonging to block b
+    p_c_j = np.divide(bg_sum_2d, total_counts_per_gene,
+                      out=np.zeros((n_blocks, n_genes)),
+                      where=~np.isclose(total_counts_per_gene, 0))
+
+    weighted       = bg_ent_2d * p_c_j          # (n_blocks, n_genes)
+    E_W            = weighted.sum(axis=0)        # (n_genes,)
+    Psi_block_num  = weighted.T                  # (n_genes, n_blocks)
+
+    # ── Psi score ─────────────────────────────────────────────────────────────
     with np.errstate(invalid='ignore', divide='ignore'):
         Psi = np.where(E_T > 0, E_W / E_T, -1)
 
-    # Psi_block scores
-    with np.errstate(divide='ignore', invalid='ignore'):
-        Psi_block = np.divide(Psi_block_num, E_W[:, None], where=E_W[:, None] != 0)
-        Psi_block[~np.isfinite(Psi_block)] = 0
+    # ── Psi_block scores ──────────────────────────────────────────────────────
+    # Replacing zero E_W with inf means 0/inf = 0 instead of 0/0 = nan for
+    # genes with no within-block entropy (avoids propagating NaN downstream).
+    E_W_safe = np.where(E_W > 0, E_W, np.inf)
+    Psi_block = Psi_block_num / E_W_safe[:, None]
+    Psi_block[~np.isfinite(Psi_block)] = 0
 
     Psi_block_df = pd.DataFrame(Psi_block, index=adata.var.index, columns=blocks)
-    
-    # Zeta score 
-    entropy = -np.nansum(Psi_block_df * np.log2(Psi_block_df.where(Psi_block_df > 0)), axis=1)
-    Zeta = 1 - (entropy / np.log2(len(Psi_block_df.columns)))
-    
+
+    # ── Zeta score ────────────────────────────────────────────────────────────
+    safe_pb = np.where(Psi_block > 0, Psi_block, 1.0)
+    log_pb  = np.log2(safe_pb)
+    log_pb[Psi_block <= 0] = 0
+    Zeta = 1 - (-np.sum(Psi_block * log_pb, axis=1) / np.log2(n_blocks))
 
     return Psi, Psi_block_df, Zeta
-
