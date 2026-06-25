@@ -1,0 +1,19 @@
+\indexentry{module@\spxentry{module}!ember\_py.light\_ember@\spxentry{ember\_py.light\_ember}|hyperpage}{3}
+\indexentry{ember\_py.light\_ember@\spxentry{ember\_py.light\_ember}!module@\spxentry{module}|hyperpage}{3}
+\indexentry{light\_ember() (in module ember\_py.light\_ember)@\spxentry{light\_ember()}\spxextra{in module ember\_py.light\_ember}|hyperpage}{3}
+\indexentry{module@\spxentry{module}!ember\_py.generate\_pvals@\spxentry{ember\_py.generate\_pvals}|hyperpage}{6}
+\indexentry{ember\_py.generate\_pvals@\spxentry{ember\_py.generate\_pvals}!module@\spxentry{module}|hyperpage}{6}
+\indexentry{generate\_pvals() (in module ember\_py.generate\_pvals)@\spxentry{generate\_pvals()}\spxextra{in module ember\_py.generate\_pvals}|hyperpage}{6}
+\indexentry{module@\spxentry{module}!ember\_py.plots@\spxentry{ember\_py.plots}|hyperpage}{7}
+\indexentry{ember\_py.plots@\spxentry{ember\_py.plots}!module@\spxentry{module}|hyperpage}{7}
+\indexentry{plot\_block\_specificity() (in module ember\_py.plots)@\spxentry{plot\_block\_specificity()}\spxextra{in module ember\_py.plots}|hyperpage}{7}
+\indexentry{plot\_partition\_specificity() (in module ember\_py.plots)@\spxentry{plot\_partition\_specificity()}\spxextra{in module ember\_py.plots}|hyperpage}{8}
+\indexentry{plot\_psi\_blocks() (in module ember\_py.plots)@\spxentry{plot\_psi\_blocks()}\spxextra{in module ember\_py.plots}|hyperpage}{8}
+\indexentry{plot\_sample\_counts() (in module ember\_py.plots)@\spxentry{plot\_sample\_counts()}\spxextra{in module ember\_py.plots}|hyperpage}{9}
+\indexentry{module@\spxentry{module}!ember\_py.top\_genes@\spxentry{ember\_py.top\_genes}|hyperpage}{9}
+\indexentry{ember\_py.top\_genes@\spxentry{ember\_py.top\_genes}!module@\spxentry{module}|hyperpage}{9}
+\indexentry{highly\_specific\_to\_block() (in module ember\_py.top\_genes)@\spxentry{highly\_specific\_to\_block()}\spxextra{in module ember\_py.top\_genes}|hyperpage}{9}
+\indexentry{highly\_specific\_to\_partition() (in module ember\_py.top\_genes)@\spxentry{highly\_specific\_to\_partition()}\spxextra{in module ember\_py.top\_genes}|hyperpage}{10}
+\indexentry{non\_specific\_to\_partition() (in module ember\_py.top\_genes)@\spxentry{non\_specific\_to\_partition()}\spxextra{in module ember\_py.top\_genes}|hyperpage}{11}
+\indexentry{module@\spxentry{module}!ember\_py@\spxentry{ember\_py}|hyperpage}{11}
+\indexentry{ember\_py@\spxentry{ember\_py}!module@\spxentry{module}|hyperpage}{11}

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>ember_py package &#8212; ember_py 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="ember_py documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="ember-py-package">
+<h1>ember_py package<a class="headerlink" href="#ember-py-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-ember_py.cli">
+<span id="ember-py-cli-module"></span><h2>ember_py.cli module<a class="headerlink" href="#module-ember_py.cli" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.cli.create_parser">
+<span class="sig-prename descclassname"><span class="pre">ember_py.cli.</span></span><span class="sig-name descname"><span class="pre">create_parser</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.cli.create_parser" title="Link to this definition">¶</a></dt>
+<dd><p>Creates and returns the ArgumentParser object for the ember toolkit.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.cli.run_command">
+<span class="sig-prename descclassname"><span class="pre">ember_py.cli.</span></span><span class="sig-name descname"><span class="pre">run_command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parser</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.cli.run_command" title="Link to this definition">¶</a></dt>
+<dd><p>Takes a parser instance and parsed args, then executes the correct command.</p>
+</dd></dl>
+
+</section>
+<section id="module-ember_py.generate_entropy_metrics">
+<span id="ember-py-generate-entropy-metrics-module"></span><h2>ember_py.generate_entropy_metrics module<a class="headerlink" href="#module-ember_py.generate_entropy_metrics" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.generate_entropy_metrics.generate_entropy_metrics">
+<span class="sig-prename descclassname"><span class="pre">ember_py.generate_entropy_metrics.</span></span><span class="sig-name descname"><span class="pre">generate_entropy_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition_label</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.generate_entropy_metrics.generate_entropy_metrics" title="Link to this definition">¶</a></dt>
+<dd><p>Generate entropy metrics Psi, Psi_blocks (dataframe) and Zeta.</p>
+<dl class="simple">
+<dt>Entropy metrics generated:</dt><dd><ul class="simple">
+<li><p>Psi : Fraction of infromation explained by partition of choice</p></li>
+<li><p>Psi_block : Specificity of infromation to a block</p></li>
+<li><p>Zeta : Speicifcty to a partition/ distance of Psi_blocks distribution from uniform</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>adata</strong> (<em>AnnData</em>) – Annotated data object with <cite>.obs</cite> containing metadata.</p></li>
+<li><p><strong>partition_label</strong> (<em>str</em>) – Column in <cite>.obs</cite> to partition by when calculating entropy metrics.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>Psi</strong> (<em>np.Array</em>) – A list of Psi scores (between 0 and 1) corresponding to the selected partition for all genes in <cite>.var</cite>.</p></li>
+<li><p><strong>Psi_block_df</strong> (<em>pd.Dataframe</em>) – A dataframe of Psi_block scores (between 0 and 1) corresponding to the selected partition for all genes in <cite>.var</cite>.
+Scores are caluclated for all blocks, each column of the dataframe corresponds to one block.</p></li>
+<li><p><strong>Zeta</strong> (<em>np.Array</em>) – A list of Zeta scores (between 0 and 1) corresponding to the selected partition for all genes in <cite>.var</cite>.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.generate_entropy_metrics.safe_divide_sparse">
+<span class="sig-prename descclassname"><span class="pre">ember_py.generate_entropy_metrics.</span></span><span class="sig-name descname"><span class="pre">safe_divide_sparse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">numerator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">denominator</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.generate_entropy_metrics.safe_divide_sparse" title="Link to this definition">¶</a></dt>
+<dd><p>Helper frunction performs element-wise division of a matrix by a vector (or array) element-wise while
+avoiding division-by-zero issues. Supports both SciPy sparse matrices and
+dense NumPy arrays.</p>
+<dl class="simple">
+<dt>Sparse case:</dt><dd><ul class="simple">
+<li><p>Zeros in the denominator are replaced with <cite>inf</cite> so the result is 0.</p></li>
+<li><p>Zero entries resulting from division are removed from the sparse representation.</p></li>
+</ul>
+</dd>
+<dt>Dense case:</dt><dd><ul class="simple">
+<li><p>Division is performed with suppressed warnings.</p></li>
+<li><p>Positions with zero denominator are set to 0.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.generate_entropy_metrics.safe_log2_sparse">
+<span class="sig-prename descclassname"><span class="pre">ember_py.generate_entropy_metrics.</span></span><span class="sig-name descname"><span class="pre">safe_log2_sparse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mat</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.generate_entropy_metrics.safe_log2_sparse" title="Link to this definition">¶</a></dt>
+<dd><p>Helper function applies an element-wise log2 transform only to the non-zero
+<em>stored</em> entries in a SciPy CSR sparse matrix. Zeros in a sparse matrix are
+implicit (not stored in <cite>.data</cite>) and remain zero in the output.</p>
+<p>Any non-finite results from the log transform (e.g., <cite>-inf</cite> from explicit
+stored zeros, or <cite>NaN</cite> from negative values) are replaced with 0.
+Parameters</p>
+</dd></dl>
+
+</section>
+<section id="module-ember_py.generate_pvals">
+<span id="ember-py-generate-pvals-module"></span><h2>ember_py.generate_pvals module<a class="headerlink" href="#module-ember_py.generate_pvals" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.generate_pvals.generate_pvals">
+<span class="sig-prename descclassname"><span class="pre">ember_py.generate_pvals.</span></span><span class="sig-name descname"><span class="pre">generate_pvals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5ad_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entropy_metrics_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_id_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">block_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cpus</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Psi_real</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Psi_block_df_real</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Zeta_real</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.generate_pvals.generate_pvals" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate empirical p-values for entropy metrics from permutation test results.
+This function can be called manually or accessed through light_ember with
+partition_pvals = True or block_pvals = True.</p>
+<p>Manual access useful if wanting to generate p-values for multiple blocks and partitions of
+interest after initial investigation using entropy metrics.</p>
+<p>Integrated access with light_ember is easier if investigating only a partition or
+a block in a partition.</p>
+<dl class="simple">
+<dt>Entropy metrics generated:</dt><dd><ul class="simple">
+<li><p>Psi : Fraction of infromation explained by partition of choice</p></li>
+<li><p>Psi_block : Specificity of infromation to a block</p></li>
+<li><p>Zeta : Speicifcty to a partition/ distance of Psi_blocks distribution from uniform</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>h5ad_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to the <cite>.h5ad</cite> file to process.
+Data should be log1p and depth normalized before running ember.
+Remove genes with less than 100 reads before running ember.</p></li>
+<li><p><strong>partition_label</strong> (<em>str</em><em>, </em><em>Required</em>) – Column in <cite>.obs</cite> used to partition cells for entropy calculations
+(e.g., “celltype”, “Genotype”, “Age”). Required to run process.
+If performing calculation on interaction term, first create a column
+in <cite>.obs</cite> concatnating the two columns of interested with a semicolon (:).</p></li>
+<li><p><strong>entropy_metrics_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to csv with entropy metrics to use for generating pvals.</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to directory where results will be saved.</p></li>
+<li><p><strong>sample_id_col</strong> (<em>str</em><em>, </em><em>Required</em>) – The column in <cite>.obs</cite> with unique identifiers for each sample or replicate
+(e.g., ‘sample_id’, ‘mouse_id’).</p></li>
+<li><p><strong>category_col</strong> (<em>str</em><em>, </em><em>Required</em>) – The column in <cite>.obs</cite> defining the primary group to balance across in order
+to generate a balanced sample of the experiment. (e.g., ‘disease_status’, ‘mouse_strain’).
+Refer to readme for further explanation on how to select category and condition columns.
+category_col and condition_col are interchangable.
+If balancing across more than 2 variables, generate interaction terms, create a column
+in <cite>.obs</cite> concatnating the two (or more) columns of interested with a semicolon (:).
+This way balancing can be done across as many variables as desired.</p></li>
+<li><p><strong>condition_col</strong> (<em>str</em><em>, </em><em>Required</em>) – The column in <cite>.obs</cite> containing the conditions to balance within
+each category to generate a balanced sample of the experiment.  (e.g., ‘sex’, ‘treatment’).
+Refer to readme for further explanation on how to select category and condition columns.
+category_col and condition_col are interchangable.
+If balancing across more than 2 variables, generate interaction terms, create a column
+in <cite>.obs</cite> concatnating the two (or more) columns of interested with a semicolon (:).
+This way balancing can be done across as many variables as desired.</p></li>
+<li><p><strong>block_label</strong> (<em>str</em><em>, </em><em>default=None</em>) – Block in partition to calucate p-values for.
+Default set to None, program will continue generating p-values for only Psi and Zeta.</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>default=42</em>) – The random seed for reproducible draws, by default 42.</p></li>
+<li><p><strong>n_iterations</strong> (<em>int</em><em>, </em><em>default = 1000</em>) – Number of iterations to calulate p-vales. Default set to 1000.
+Note that doing fewer than 1000 iterations is a good choice to get first pass p-values
+but for reliable p-values 1000 iterations is recommended.
+Larger than 1000 will give you more relibale p-values but will increase runtime significantly.</p></li>
+<li><p><strong>n_cpus</strong> (<em>int</em><em>, </em><em>default=1</em>) – Number of cpus to use to perfrom p-value calculation.
+Default set to 1 assuming no parallel compute power on local machine.
+User can input -1 to use all available cpus but one.</p></li>
+<li><p><strong>Psi_real</strong> (<em>pd.Series</em><em>, </em><em>default=None</em>) – Observed Psi values for each gene.
+Used by light_ember, not necessary for user use.</p></li>
+<li><p><strong>Psi_block_df_real</strong> (<em>pd.Dataframe</em><em>, </em><em>default = None</em>) – Observed Psi_block values for all blocks in chosen partition.
+Used by light_ember, not necessary for user use.</p></li>
+<li><p><strong>Zeta_real</strong> (<em>pd.Series</em><em>, </em><em>default=None</em>) – Observed Zeta values for each gene.
+Used by light_ember, not necessary for user use.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p><strong>What to expect inside ‘pvals_entropy_metrics.csv’</strong>:</p>
+<ul class="simple">
+<li><p>gene_name: All genes in <cite>.var</cite></p></li>
+<li><p>Psi: Psi scores averaged over n draws (between 0 and 1) generated by light_ember for each gene in <cite>.var</cite>.</p></li>
+<li><p>Psi p-value: Permutation based empirical p-values for observed Psi scores for each gene in <cite>.var</cite>.</p></li>
+<li><p>Zeta: Zeta scores averaged over n draws (between 0 and 1) generated by light_ember for each gene in <cite>.var</cite>.</p></li>
+<li><p>Zeta p-value: Permutation based empirical p-values for observed Zeta scores for each gene in <cite>.var</cite>.</p></li>
+<li><p>Psi q-value: Multiple testing corrected q-values for Psi scores.</p></li>
+<li><p>Zeta q-value: Multiple testing corrected q-values for Zeta scores.Correction perfromed to include all p-values generated in a single file (Psi and Zeta).</p></li>
+</ul>
+<p>if block_pvals = True and a single block_label is given:</p>
+<ul class="simple">
+<li><p>psi_block: psi_block scores (between 0 and 1) generated by light_ember for each gene in <cite>.var</cite>.</p></li>
+<li><p>psi_block p-value: Permutation based empirical p-values for observed psi_block scores for each gene in <cite>.var</cite>.</p></li>
+<li><p>psi_block q-value: Multiple testing corrected q-values for psi_block scores. Correction perfromed to include all p-values generated in a single file (Psi, psi_block and Zeta).</p></li>
+</ul>
+</dd></dl>
+
+</section>
+<section id="module-ember_py.light_ember">
+<span id="ember-py-light-ember-module"></span><h2>ember_py.light_ember module<a class="headerlink" href="#module-ember_py.light_ember" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.light_ember.light_ember">
+<span class="sig-prename descclassname"><span class="pre">ember_py.light_ember.</span></span><span class="sig-name descname"><span class="pre">light_ember</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5ad_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_id_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_draws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_draws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition_pvals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">block_pvals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">block_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pval_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cpus</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.light_ember.light_ember" title="Link to this definition">¶</a></dt>
+<dd><p>Runs the ember entropy metrics and p-value generation workflow on an AnnData object.</p>
+<p>This function loads an AnnData <cite>.h5ad</cite> file, optionally performs balanced sampling
+across replicates, computes entropy metrics for the specified partition,
+and generates p-values for Psi and Zeta and optionally Psi_block for a block of choice.</p>
+<dl class="simple">
+<dt>Entropy metrics generated:</dt><dd><ul class="simple">
+<li><p>Psi : Fraction of infromation explained by partition of choice</p></li>
+<li><p>Psi_block : Specificity of infromation to a block</p></li>
+<li><p>Zeta : Speicifcty to a partition/ distance of Psi_blocks distribution from uniform</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>h5ad_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to the <cite>.h5ad</cite> file to process.
+Data should be log1p and depth normalized before running ember.
+Remove genes with less than 100 reads before running ember.</p></li>
+<li><p><strong>partition_label</strong> (<em>str</em><em>, </em><em>Required</em>) – Column in <cite>.obs</cite> used to partition cells for entropy calculations
+(e.g., “celltype”, “Genotype”, “Age”). Required to run process.
+If performing calculation on interaction term, first create a column
+in <cite>.obs</cite> concatnating the two columns of interested with a semicolon (:).</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to directory where results will be saved. Required to run process.</p></li>
+<li><p><strong>sampling</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to perform balanced sampling across replicates before entropy calculation.
+If True, <cite>sample_id_col</cite>, <cite>category_col</cite>, and <cite>condition_col</cite> must be provided.
+Sampling should only be False if fast intermediate results are desired or
+if there are no replicates to sample over.
+If sampling is set to False but either partition_pvals or block_pvals are set to
+True then the sampling=False will be overridden as pval generation requires sampling.</p></li>
+<li><p><strong>sample_id_col</strong> (<em>str</em><em>, </em><em>default = None</em>) – The column in <cite>.obs</cite> with unique identifiers for each sample or replicate
+(e.g., ‘sample_id’, ‘mouse_id’).</p></li>
+<li><p><strong>category_col</strong> (<em>str</em><em>, </em><em>default = None</em>) – The column in <cite>.obs</cite> defining the primary group to balance across in order
+to generate a balanced sample of the experiment. (e.g., ‘disease_status’, ‘mouse_strain’).
+Refer to readme for further explanation on how to select category and condition columns.
+category_col and condition_col are interchangable.
+If balancing across more than 2 variables, generate interaction terms, create a column
+in <cite>.obs</cite> concatnating the two (or more) columns of interested with a semicolon (:).
+This way balancing can be done across as many variables as desired.</p></li>
+<li><p><strong>condition_col</strong> (<em>str</em><em>, </em><em>default = None</em>) – The column in <cite>.obs</cite> containing the conditions to balance within
+each categoryto generate a balanced sample of the experiment.  (e.g., ‘sex’, ‘treatment’).
+Refer to readme for further explanation on how to select category and condition columns.
+category_col and condition_col are interchangable.
+If balancing across more than 2 variables, generate interaction terms, create a column
+in <cite>.obs</cite> concatnating the two (or more) columns of interested with a semicolon (:).
+This way balancing can be done across as many variables as desired.</p></li>
+<li><p><strong>num_draws</strong> (<em>int</em><em>, </em><em>default = 100</em>) – The number of balanced subsets to generate, by default 100.</p></li>
+<li><p><strong>save_draws</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to save intermediate draws to save_dir.</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>,  </em><em>default = 42</em>) – The random seed for reproducible draws, by default 42.</p></li>
+<li><p><strong>partition_pvals</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to compute permutation-based p-values for the <cite>partition_label</cite>.
+P-values are generated by sampling. If sampling = False and partition_pvals = True,
+the sampling=False will be overwritten.
+Calls generate_pavls, which can be called manually after metric generation as well.</p></li>
+<li><p><strong>block_pvals</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to compute permutation-based p-values for the <cite>block_label</cite>.
+P-values are generated by sampling. If sampling = False and block_pvals = True,
+the sampling=False will be overwritten.
+Calls generate_pavls, which can be called manually after metric generation as well.</p></li>
+<li><p><strong>block_label</strong> (<em>str</em><em>,  </em><em>default = None</em>) – One value in the <cite>.obs</cite> column for partition_label to use for block-based permutation tests.
+Required if <cite>block_pvals=True</cite>.</p></li>
+<li><p><strong>n_pval_iterations</strong> (<em>int</em><em>, </em><em>default=1000</em>) – Number of permutations to use for p-value calculation.</p></li>
+<li><p><strong>n_cpus</strong> (<em>int</em><em>, </em><em>default=1</em>) – Number of CPU cores to use for parallel permutation testing.
+For this script, performance is I/O-bound and may not improve beyond 4-8 cores.’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Results are saved to <cite>save_dir</cite> as CSV files.</p></li>
+<li><p>one csv file with all entropy metrics</p></li>
+<li><p>one csv file in a new Psi_block_df folder with psi block values for all blocks in a partition</p></li>
+<li><p>Separate file for pvals</p></li>
+<li><p>Separate files for each partition</p></li>
+<li><p>Alternate file names depending on sampling on or off.</p></li>
+</ul>
+<p><strong>What to expect inside ‘entropy_metrics.csv’</strong>:</p>
+<ul class="simple">
+<li><p>gene_name: All genes in <cite>.var</cite></p></li>
+<li><p>Psi_mean: Psi scores averaged over n draws (between 0 and 1) corresponding to the selected partition for each gene in <cite>.var</cite>.</p></li>
+<li><p>Psi_std: Standard deviation of Psi scores across n draws corresponding to the selected partition for each gene in <cite>.var</cite>.</p></li>
+<li><p>Psi_valid_counts: Number of valid Psi scores observed across n draws. Only use genes for downstream analysis that have valid counts=num_draws. If valid counts is not close to num_draws, increase threshold for filtering genes with low reads beforehand(recommended &lt;100 reads, increase as needed).</p></li>
+<li><p>Zeta_mean: Zeta scores averaged over n draws (between 0 and 1) corresponding to the selected partition for each gene in <cite>.var</cite>.</p></li>
+<li><p>Zeta_std: Standard deviation of Zeta scores across n draws corresponding to the selected partition for each gene in <cite>.var</cite>.</p></li>
+<li><p>Zeta_valid_counts: Number of valid Psi scores observed across n draws. Only use genes for downstream analysis that have valid counts=num_draws. If valid counts is not close to num_draws, increase threshold for filtering genes with low reads beforehand (recommended &lt;100 reads, increase as needed).</p></li>
+</ul>
+<p><strong>What to expect inside ‘Psi_block_df/’</strong>:</p>
+<ul class="simple">
+<li><p>mean_Psi_block_df.csv : A dataframe of mean Psi_block scores (between 0 and 1) corresponding to the selected partition for each gene in <cite>.var</cite>. Scores are caluclated for all blocks, each column of the dataframe corresponds to one block.</p></li>
+<li><p>std_Psi_block_df.csv : A dataframe of standard deviations for Psi_block scores corresponding to the selected partition for each gene in <cite>.var</cite>.Scores are caluclated for all blocks, each column of the dataframe corresponds to one block.</p></li>
+</ul>
+<p><strong>What to expect inside ‘pvals_entropy_metrics.csv’</strong>:</p>
+<ul class="simple">
+<li><p>gene_name: All genes in <cite>.var</cite></p></li>
+<li><p>Psi: Psi scores averaged over n draws (between 0 and 1) generated by light_ember for each gene in <cite>.var</cite>.</p></li>
+<li><p>Psi p-value: Permutation based empirical p-values for observed Psi scores for each gene in <cite>.var</cite>.</p></li>
+<li><p>Zeta: Zeta scores averaged over n draws (between 0 and 1) generated by light_ember for each gene in <cite>.var</cite>.</p></li>
+<li><p>Zeta p-value: Permutation based empirical p-values for observed Zeta scores for each gene in <cite>.var</cite>.</p></li>
+<li><p>Psi q-value: Multiple testing corrected q-values for Psi scores.</p></li>
+<li><p>Zeta q-value: Multiple testing corrected q-values for Zeta scores.Correction perfromed to include all p-values generated in a single file (Psi and Zeta).</p></li>
+</ul>
+<p>If block_pvals = True and a single block_label is given:</p>
+<ul class="simple">
+<li><p>psi_block: psi_block scores (between 0 and 1) generated by light_ember for each gene in <cite>.var</cite>.</p></li>
+<li><p>psi_block p-value: Permutation based empirical p-values for observed psi_block scores for each gene in <cite>.var</cite>.</p></li>
+<li><p>psi_block q-value: Multiple testing corrected q-values for psi_block scores. Correction perfromed to include all p-values generated in a single file (Psi, psi_block and Zeta).</p></li>
+</ul>
+</dd></dl>
+
+</section>
+<section id="module-ember_py.plots">
+<span id="ember-py-plots-module"></span><h2>ember_py.plots module<a class="headerlink" href="#module-ember_py.plots" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.plots.plot_block_specificity">
+<span class="sig-prename descclassname"><span class="pre">ember_py.plots.</span></span><span class="sig-name descname"><span class="pre">plot_block_specificity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partition_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">block_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pvals_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">highlight_genes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_palette</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.plots.plot_block_specificity" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a psi_block vs. Psi scatter plot to visualize block-specific genes.</p>
+<p>This function reads p-value data, colors genes based on their statistical
+significance for Psi and psi_block scores, and highlights the top genes
+significant in both metrics. Only interpret genes that are significant by both Psi
+and psi_block since those are genes that have reliable scores after permutation
+testing.
+Allows for custom highlighting of a user-provided gene list.
+Fontsize and color pallette can be customized.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>partition_label</strong> (<em>str</em><em>, </em><em>Required.</em>) – The label for the partition, used in the plot title.</p></li>
+<li><p><strong>block_label</strong> (<em>str</em><em>, </em><em>Required.</em>) – The label for the block variable (e.g., a cell type or condition).</p></li>
+<li><p><strong>pvals_dir</strong> (<em>str</em><em>, </em><em>Required.</em>) – Path to the input CSV file containing p-values and scores.
+The CSV must have gene names as its index column.</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>Required.</em>) – Path where the output plot image will be saved.</p></li>
+<li><p><strong>highlight_genes</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>default=None.</em>) – A list of gene names to highlight and annotate on the plot, by default None.</p></li>
+<li><p><strong>q_thresh</strong> (<em>float</em><em>, </em><em>float</em><em>, </em><em>default = 0.05</em>) – Threshold for q-values. Genes are retained if both
+‘Psi q-value’ &lt;= q_thresh and ‘psi_block q-value’ &lt;= q_thresh.</p></li>
+<li><p><strong>fontsize</strong> (<em>int</em><em>, </em><em>default = 18.</em>) – The base font size for plot labels and text, by default 18.</p></li>
+<li><p><strong>custom_palette</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>default=None.</em>) – A list of 6 hex color codes to customize the plot’s color scheme.
+If None, a default palette is used.
+Provide list of colors int his order:
+[‘significant by psi’,
+‘significant by psi_block’,
+‘highlight genes’,
+‘significant by both’,
+‘cirlce markers’,
+‘circle housekeeping genes’,
+‘significant by neither’]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.plots.plot_partition_specificity">
+<span class="sig-prename descclassname"><span class="pre">ember_py.plots.</span></span><span class="sig-name descname"><span class="pre">plot_partition_specificity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partition_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pvals_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">highlight_genes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_palette</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.plots.plot_partition_specificity" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a Zeta vs. Psi scatter plot to visualize partition-specific genes.</p>
+<p>This function reads p-value data, colors genes based on their statistical
+significance for Psi and Zeta scores, and highlights top “marker” and
+“housekeeping” genes. Only interpret genes that are significant by both Psi
+and Zeta since those are genes that have reliable scores after permutation
+testing.
+Allows for custom highlighting of a user-provided gene list.
+Fontsize and color pallette can be customized.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>partition_label</strong> (<em>str</em><em>, </em><em>Required.</em>) – The label for the partition being plotted, used in the plot title.</p></li>
+<li><p><strong>pvals_dir</strong> (<em>str</em><em>, </em><em>Required.</em>) – Path to the input CSV file containing p-values and scores (Psi, Zeta, q-values).
+The CSV must have gene names as its index column.</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>Required.</em>) – Path where the output plot image will be saved.</p></li>
+<li><p><strong>highlight_genes</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>default=None.</em>) – A list of gene names to highlight and annotate on the plot, by default None.</p></li>
+<li><p><strong>q_thresh</strong> (<em>float</em><em>, </em><em>float</em><em>, </em><em>default = 0.05</em>) – Threshold for q-values. Genes are retained if both
+‘Psi q-value’ &lt;= q_thresh and ‘Zeta q-value’ &lt;= q_thresh.</p></li>
+<li><p><strong>fontsize</strong> (<em>int</em><em>, </em><em>default=18.</em>) – The base font size for plot labels and text, by default 18.</p></li>
+<li><p><strong>custom_palette</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>default=None.</em>) – A list of 7 hex color codes to customize the plot’s color scheme.
+If None, a default palette is used.
+Please provide list in this order
+[‘significant by psi’,
+‘significant by zeta’,
+‘highlight genes’,
+‘significant by both’,
+‘cirlce markers’,
+‘circle housekeeping genes’,
+‘significant by neither’]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.plots.plot_psi_blocks">
+<span class="sig-prename descclassname"><span class="pre">ember_py.plots.</span></span><span class="sig-name descname"><span class="pre">plot_psi_blocks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gene_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_block_df_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.plots.plot_psi_blocks" title="Link to this definition">¶</a></dt>
+<dd><p>Generates and saves a bar plot of mean psi block values with error bars.</p>
+<p>This function reads two CSV files from a specified directory: one for mean
+psi block values and one for standard deviations. It plots the mean values
+for a specific gene as a bar plot with corresponding standard deviation
+error bars.
+Fontsize can be customized.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>gene_name</strong> (<em>str</em><em>, </em><em>Required</em>) – The name of the gene (row) to select and plot from the CSV files.</p></li>
+<li><p><strong>partition_label</strong> (<em>str</em><em>, </em><em>Required</em>) – The partition label used to find the correct files (e.g., ‘Genotype’).</p></li>
+<li><p><strong>psi_block_df_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to the directory containing the mean and std CSV files. Files must
+be named ‘mean_Psi_block_df_{partition_label}.csv’ and
+‘std_Psi_block_df_{partition_label}.csv’.</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to directory to save the output plot image.</p></li>
+<li><p><strong>fontsize</strong> (<em>int</em><em>, </em><em>default=18.</em>) – The base font size for plot labels and text, by default 18.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.plots.plot_sample_counts">
+<span class="sig-prename descclassname"><span class="pre">ember_py.plots.</span></span><span class="sig-name descname"><span class="pre">plot_sample_counts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5ad_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_id_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.plots.plot_sample_counts" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a bar plot showing the number of unique individuals
+per category and condition.</p>
+<p>This function reads an AnnData object from an .h5ad file in backed mode,
+calculates the number of unique individuals for each combination of a given
+category and condition, and visualizes these counts as a grouped bar plot.
+Fontsize can be customized.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>h5ad_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to the input AnnData (.h5ad) file.</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to directory to save the output plot image.</p></li>
+<li><p><strong>sample_id_col</strong> (<em>str</em><em>, </em><em>Required</em>) – The column name in adata.obs that contains unique sample IDs.</p></li>
+<li><p><strong>category_col</strong> (<em>str</em><em>, </em><em>Required</em>) – The column name to use for the primary categories on the x-axis.</p></li>
+<li><p><strong>condition_col</strong> (<em>str</em><em>, </em><em>Required</em>) – The column name to use for grouping the bars (hue).</p></li>
+<li><p><strong>fontsize</strong> (<em>int</em><em>, </em><em>default = 18.</em>) – The base font size for plot labels and text, by default 18.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-ember_py.sample_replicates">
+<span id="ember-py-sample-replicates-module"></span><h2>ember_py.sample_replicates module<a class="headerlink" href="#module-ember_py.sample_replicates" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.sample_replicates.aitchison_mean_and_std">
+<span class="sig-prename descclassname"><span class="pre">ember_py.sample_replicates.</span></span><span class="sig-name descname"><span class="pre">aitchison_mean_and_std</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Psi_block_dfs_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.sample_replicates.aitchison_mean_and_std" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the Aitchison mean and geometric standard deviation of compositional
+DataFrames across blocks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Psi_block_dfs_list</strong> (<em>list</em><em> of </em><em>pd.DataFrame</em>) – List of compositional matrices (genes x choice_of_partition).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>mean_df</strong> (<em>pd.DataFrame</em>) – Aitchison mean of Psi block values.</p></li>
+<li><p><strong>var_df</strong> (<em>pd.DataFrame</em>) – geometric std of the Psi block values.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.sample_replicates.generate_balanced_draws">
+<span class="sig-prename descclassname"><span class="pre">ember_py.sample_replicates.</span></span><span class="sig-name descname"><span class="pre">generate_balanced_draws</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_id_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_draws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.sample_replicates.generate_balanced_draws" title="Link to this definition">¶</a></dt>
+<dd><p>Generate balanced subsets of replicates based on a categorical variable
+(eg: Genotype, Age, Estrus Stage) and balances draws within each category
+by a condition variable (eg: Sex, Knockout/Wildtype/Overexpressed, Treated/Control).</p>
+<p>For each unique value in <cite>category_col</cite>, this function creates draws where each
+unique value from <cite>condition_col</cite> is represented exactly once. It iterates
+through the available samples for each category-condition pair to generate
+diverse subsets across multiple draws.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>adata</strong> (<em>AnnData</em>) – The annotated data object with sample metadata in <cite>.obs</cite>.</p></li>
+<li><p><strong>sample_id_col</strong> (<em>str</em>) – The column in <cite>.obs</cite> with unique identifiers for each sample or replicate
+(e.g., ‘sample_id’, ‘mouse_id’).</p></li>
+<li><p><strong>category_col</strong> (<em>str</em>) – The column in <cite>.obs</cite> defining the primary groups to balance within
+(e.g., ‘disease_status’, ‘mouse_strain’).</p></li>
+<li><p><strong>condition_col</strong> (<em>str</em>) – The column in <cite>.obs</cite> containing the conditions to balance across within
+each category (e.g., ‘sex’, ‘treatment’).</p></li>
+<li><p><strong>num_draws</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of balanced subsets to generate, by default 100.</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – The random seed for reproducible draws, by default 42.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>list[list[str]]</em> – A list of draws, where each draw is a list of sample IDs.</p></li>
+<li><p><em>dict[str, int]</em> – A dictionary tracking the selection count for each sample.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-ember_py.top_genes">
+<span id="ember-py-top-genes-module"></span><h2>ember_py.top_genes module<a class="headerlink" href="#module-ember_py.top_genes" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.top_genes.highly_specific_to_block">
+<span class="sig-prename descclassname"><span class="pre">ember_py.top_genes.</span></span><span class="sig-name descname"><span class="pre">highly_specific_to_block</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partition_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">block_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pvals_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_block_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.top_genes.highly_specific_to_block" title="Link to this definition">¶</a></dt>
+<dd><p>Identifies significant and specific genes from a ember generated
+p-values/q-values CSV file based on thresholds for Psi, psi_block, and q-values.
+(Potential marker genes)</p>
+<p>This function reads a CSV file containing Psi and psi_block metrics (and their
+corresponding q-values), filters genes that meet given significance and
+specificity thresholds, and saves the resulting subset to a new CSV file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pvals_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to the input CSV file (e.g., ‘pvals_entropy_metrics_Age_E16.5.csv’).
+The CSV must include the following columns:
+‘Psi q-value’, ‘psi_block q-value’, ‘Psi’, and ‘psi_block’.</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Directory where the filtered results CSV will be saved.</p></li>
+<li><p><strong>partition_label</strong> (<em>Required</em>) – Name of partition used to generate entropy metrics, used to label saved csv.</p></li>
+<li><p><strong>block_label</strong> (<em>Required</em>) – Name of block in partition used to generate entropy metrics, used to label saved csv.</p></li>
+<li><p><strong>psi_thresh</strong> (<em>float</em><em>, </em><em>default = 0.5</em>) – Threshold for Psi values. Only genes with Psi &gt; psi_thresh are kept.</p></li>
+<li><p><strong>psi_block_thresh</strong> (<em>float</em><em>, </em><em>Required</em><em>, </em><em>default = 0.5</em>) – Threshold for psi_block values. Only genes with psi_block &gt; psi_block_thresh are kept.</p></li>
+<li><p><strong>q_thresh</strong> (<em>float</em><em>, </em><em>float</em><em>, </em><em>default = 0.05</em>) – Threshold for q-values. Genes are retained if both
+‘Psi q-value’ &lt;= q_thresh and ‘psi_block q-value’ &lt;= q_thresh.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame containing the significant and specific genes that meet
+all threshold criteria. Also saved as
+“highly_specific_genes_by_{partition_label}_{block_label}.csv”
+in the specified save directory.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.top_genes.highly_specific_to_partition">
+<span class="sig-prename descclassname"><span class="pre">ember_py.top_genes.</span></span><span class="sig-name descname"><span class="pre">highly_specific_to_partition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partition_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pvals_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zeta_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.top_genes.highly_specific_to_partition" title="Link to this definition">¶</a></dt>
+<dd><p>Identifies significant and specific genes from a ember generated
+p-values/q-values CSV file based on thresholds for Psi, Zeta, and q-values.</p>
+<p>This function reads a CSV file containing Psi and Zeta metrics (and their
+corresponding q-values), filters genes that meet given significance and
+specificity thresholds, and saves the resulting subset to a new CSV file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pvals_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to the input CSV file (e.g., ‘pvals_entropy_metrics_Age_E16.5.csv’).
+The CSV must include the following columns:
+‘Psi q-value’, ‘Zeta q-value’, ‘Psi’, and ‘Zeta’.</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Directory where the filtered results CSV will be saved.</p></li>
+<li><p><strong>partition_label</strong> (<em>Required</em>) – Name of partition used to generate entropy metrics, used to label saved csv.</p></li>
+<li><p><strong>psi_thresh</strong> (<em>float</em><em>, </em><em>default = 0.5</em>) – Threshold for Psi values. Only genes with Psi &gt; psi_thresh are kept.</p></li>
+<li><p><strong>zeta_thresh</strong> (<em>float</em><em>, </em><em>Required</em><em>, </em><em>default = 0.5</em>) – Threshold for Zeta values. Only genes with Zeta &gt; zeta_thresh are kept.</p></li>
+<li><p><strong>q_thresh</strong> (<em>float</em><em>, </em><em>default = 0.05</em>) – Threshold for q-values. Genes are retained if both
+‘Psi q-value’ &lt;= q_thresh and ‘Zeta q-value’ &lt;= q_thresh.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame containing the significant and specific genes that meet
+all threshold criteria. Also saved as “highly_specific_genes_to_{partition_label}.csv”
+in the specified save directory.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ember_py.top_genes.non_specific_to_partition">
+<span class="sig-prename descclassname"><span class="pre">ember_py.top_genes.</span></span><span class="sig-name descname"><span class="pre">non_specific_to_partition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partition_label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pvals_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psi_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zeta_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_thresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember_py.top_genes.non_specific_to_partition" title="Link to this definition">¶</a></dt>
+<dd><p>Identifies significant and non-specific genes from a ember generated
+p-values/q-values CSV file based on thresholds for Psi, Zeta, and q-values.
+(Potential housekeeping genes)</p>
+<p>This function reads a CSV file containing Psi and Zeta metrics (and their
+corresponding q-values), filters genes that meet given significance and
+specificity thresholds, and saves the resulting subset to a new CSV file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pvals_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Path to the input CSV file (e.g., ‘pvals_entropy_metrics_Age_E16.5.csv’).
+The CSV must include the following columns:
+‘Psi q-value’, ‘Zeta q-value’, ‘Psi’, and ‘Zeta’.</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>Required</em>) – Directory where the filtered results CSV will be saved.</p></li>
+<li><p><strong>partition_label</strong> (<em>Required</em>) – Name of partition used to generate entropy metrics, used to label saved csv.</p></li>
+<li><p><strong>psi_thresh</strong> (<em>float</em><em>, </em><em>default = 0.5</em>) – Threshold for Psi values. Only genes with Psi &gt; psi_thresh are kept.</p></li>
+<li><p><strong>zeta_thresh</strong> (<em>float</em><em>, </em><em>default = 0.5</em>) – Threshold for Zeta values. Only genes with Zeta &lt; zeta_thresh are kept.</p></li>
+<li><p><strong>q_thresh</strong> (<em>float</em><em>, </em><em>default = 0.05</em>) – Threshold for q-values. Genes are retained if both
+‘Psi q-value’ &lt;= q_thresh and ‘Zeta q-value’ &lt;= q_thresh.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame containing the significant and specific genes that meet
+all threshold criteria. Also saved as “non_specific_genes_to_{partition_label}.csv”
+in the specified save directory.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-ember_py">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ember_py" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ember_py</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ember_py package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-ember_py.cli">ember_py.cli module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-ember_py.generate_entropy_metrics">ember_py.generate_entropy_metrics module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-ember_py.generate_pvals">ember_py.generate_pvals module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-ember_py.light_ember">ember_py.light_ember module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-ember_py.plots">ember_py.plots module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-ember_py.sample_replicates">ember_py.sample_replicates module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-ember_py.top_genes">ember_py.top_genes module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-ember_py">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">ember_py documentation</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Nikhila P. Swarna.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/ember_py.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
