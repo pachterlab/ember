@@ -76,7 +76,7 @@ def generate_pvals(
     save_dir,
     sample_id_col, 
     category_col, 
-    condition_col = NotImplemented,
+    condition_col = None,
     block_label=None,
     seed = 42,
     n_iterations=1000,
