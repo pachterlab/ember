@@ -127,15 +127,17 @@ def generate_pvals(
     category_col : str, Required
         The column in `.obs` defining the primary group to balance across in order
         to generate a balanced sample of the experiment. (e.g., 'disease_status', 'mouse_strain').
+        If only one category to balance across you can skip the condition_col. 
         Refer to readme for further explanation on how to select category and condition columns.
         category_col and condition_col are interchangable.
         If balancing across more than 2 variables, generate interaction terms, create a column
         in `.obs` concatnating the two (or more) columns of interested with a semicolon (:). 
         This way balancing can be done across as many variables as desired. 
         
-    condition_col : str, Required
+    condition_col : str, default = None
         The column in `.obs` containing the conditions to balance within
         each category to generate a balanced sample of the experiment.  (e.g., 'sex', 'treatment').
+        Skip if only using one category column that has been populated into category_col.
         Refer to readme for further explanation on how to select category and condition columns. 
         category_col and condition_col are interchangable. 
         If balancing across more than 2 variables, generate interaction terms, create a column

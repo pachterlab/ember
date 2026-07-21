@@ -133,6 +133,7 @@ def light_ember(
         to generate a balanced sample of the experiment. (e.g., 'disease_status', 'mouse_strain').
         Refer to readme for further explanation on how to select category and condition columns.
         category_col and condition_col are interchangable.
+        If only one category to balance across you can skip the condition_col. 
         If balancing across more than 2 variables, generate interaction terms, create a column
         in `.obs` concatnating the two (or more) columns of interested with a semicolon (:). 
         This way balancing can be done across as many variables as desired. 
@@ -140,6 +141,7 @@ def light_ember(
     condition_col : str, default = None
         The column in `.obs` containing the conditions to balance within
         each categoryto generate a balanced sample of the experiment.  (e.g., 'sex', 'treatment').
+        Skip if only using one category column that has been populated into category_col. 
         Refer to readme for further explanation on how to select category and condition columns. 
         category_col and condition_col are interchangable. 
         If balancing across more than 2 variables, generate interaction terms, create a column
