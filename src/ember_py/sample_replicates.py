@@ -5,17 +5,19 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-def generate_balanced_draws(adata, sample_id_col, category_col, condition_col, num_draws=100, seed=42):
+import random
+import math
+from collections import defaultdict
+
+def generate_balanced_draws(adata, sample_id_col, category_col, condition_col=None, num_draws=100, seed=42):
     """
     Generate balanced subsets of replicates based on a categorical variable 
     (eg: Genotype, Age, Estrus Stage) and balances draws within each category
     by a condition variable (eg: Sex, Knockout/Wildtype/Overexpressed, Treated/Control). 
- 
-    For each unique value in `category_col`, this function creates draws where each
-    unique value from `condition_col` is represented exactly once. It iterates
-    through the available samples for each category-condition pair to generate
-    diverse subsets across multiple draws.
     
+    If condition_col is None or identical to category_col, the function will 
+    balance across only the single variable provided in category_col.
+ 
     Parameters
     ----------
     adata : AnnData
@@ -26,9 +28,10 @@ def generate_balanced_draws(adata, sample_id_col, category_col, condition_col, n
     category_col : str
         The column in `.obs` defining the primary groups to balance within
         (e.g., 'disease_status', 'mouse_strain').
-    condition_col : str
-        The column in `.obs` containing the conditions to balance across within
-        each category (e.g., 'sex', 'treatment').
+    condition_col : str, optional
+        The column in `.obs` containing the conditions to balance across. If 
+        set to None or the same as category_col, samples are drawn across the 
+        category_col only.
     num_draws : int, optional
         The number of balanced subsets to generate, by default 100.
     seed : int, optional
@@ -40,21 +43,35 @@ def generate_balanced_draws(adata, sample_id_col, category_col, condition_col, n
         A list of draws, where each draw is a list of sample IDs.
     dict[str, int]
         A dictionary tracking the selection count for each sample.
-
     """
     
     df = adata.obs
     
-    # Group samples by (category, condition)
-    grouped = (
-        df.groupby([category_col, condition_col], observed=True)[sample_id_col]
-        .unique()
-        .apply(list)
-        .to_dict()
-    )
-
-    all_category_vals = sorted(df[category_col].unique())
-    all_condition_vals = sorted(df[condition_col].unique())
+    # Check if we are sampling across a single variable
+    single_var = (condition_col is None) or (category_col == condition_col)
+    
+    if single_var:
+        # Group by a single column
+        grouped = (
+            df.groupby(category_col, observed=True)[sample_id_col]
+            .unique()
+            .apply(list)
+            .to_dict()
+        )
+        # Keys to iterate over are just the unique categories
+        keys_to_sample = sorted(df[category_col].unique())
+    else:
+        # Group by both columns
+        grouped = (
+            df.groupby([category_col, condition_col], observed=True)[sample_id_col]
+            .unique()
+            .apply(list)
+            .to_dict()
+        )
+        all_category_vals = sorted(df[category_col].unique())
+        all_condition_vals = sorted(df[condition_col].unique())
+        # Keys to iterate over are tuples of (category, condition)
+        keys_to_sample = [(cat, cond) for cat in all_category_vals for cond in all_condition_vals]
 
     used_count = defaultdict(int)
     balanced_draws = []
@@ -63,27 +80,29 @@ def generate_balanced_draws(adata, sample_id_col, category_col, condition_col, n
 
     for _ in range(num_draws):
         current_draw = []
-        for category in all_category_vals:
-            for condition in all_condition_vals:
-                
-                choices = grouped.get((category, condition), [])
-                if not choices:
+        
+        for key in keys_to_sample:
+            choices = grouped.get(key, [])
+            
+            if not choices:
+                if single_var:
+                    raise ValueError(f"Cannot create balanced draws. No samples found for category '{key}'.")
+                else:
                     raise ValueError(
                         f"Cannot create balanced draws. No samples found for the combination "
-                        f"({category}, {condition}). Please ensure every category-condition "
-                        "pair has at least one sample."
+                        f"{key}. Please ensure every category-condition pair has at least one sample."
                     )
 
-                # Find all samples with the minimum usage count for this group
-                min_count = min(used_count[c] for c in choices)
-                least_used_choices = [c for c in choices if used_count[c] == min_count]
-                
-                # Randomly select from the least-used candidates
-                chosen_sample = random.choice(least_used_choices)
-                current_draw.append(chosen_sample)
-                
-                # Update usage count for the chosen sample
-                used_count[chosen_sample] += 1
+            # Find all samples with the minimum usage count for this group
+            min_count = min(used_count[c] for c in choices)
+            least_used_choices = [c for c in choices if used_count[c] == min_count]
+            
+            # Randomly select from the least-used candidates
+            chosen_sample = random.choice(least_used_choices)
+            current_draw.append(chosen_sample)
+            
+            # Update usage count for the chosen sample
+            used_count[chosen_sample] += 1
                 
         balanced_draws.append(current_draw)
 
@@ -91,7 +110,6 @@ def generate_balanced_draws(adata, sample_id_col, category_col, condition_col, n
     print(f'\nSampled {num_draws} out of {total_combinations} possible unique combinations.')
 
     return balanced_draws, dict(used_count)
-
 
 # Function to combine sampled values
 def aitchison_mean_and_std(Psi_block_dfs_list):

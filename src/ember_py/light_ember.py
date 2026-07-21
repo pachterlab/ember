@@ -250,13 +250,12 @@ def light_ember(
             # Check that all required parameter variables were passed to the function.
             required_params = {
                 "sample_id_col": sample_id_col, 
-                "category_col": category_col, 
-                "condition_col": condition_col
+                "category_col": category_col
             }
             if not all(required_params.values()):
                 missing_params = [name for name, value in required_params.items() if not value]
                 raise ValueError(
-                    f"If sampling or generating p-values, you must provide `sample_id_col`, `category_col`, and `condition_col`. "
+                    f"If sampling or generating p-values, you must provide `sample_id_col` and `category_col`. "
                     f"You are missing the following parameter(s): {missing_params}"
                 )
 

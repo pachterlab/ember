@@ -76,7 +76,7 @@ def generate_pvals(
     save_dir,
     sample_id_col, 
     category_col, 
-    condition_col,
+    condition_col = NotImplemented,
     block_label=None,
     seed = 42,
     n_iterations=1000,
@@ -226,11 +226,10 @@ def generate_pvals(
                 f"block_label '{block_label}' not found in adata.obs['{partition_label}']. "
                 f"Available block labels: {list(valid_blocks)}"
         )
-    # Validate sample_id_col, category_col, and condition_col 
+    # Validate sample_id_col, category_col 
     required_params = {
         "sample_id_col": sample_id_col, 
-        "category_col": category_col, 
-        "condition_col": condition_col
+        "category_col": category_col
     }
 
     required_cols = list(required_params.values())
